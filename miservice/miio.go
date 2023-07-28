@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 )
 
 type IOService struct {
@@ -27,7 +26,7 @@ func NewIOService(account *Account) *IOService {
 	return &IOService{account: account, server: server}
 }
 
-func (miio *IOService) Request(uri string, args map[string]interface{}) (map[string]interface{}, error) {
+func (miio *IOService) Request(uri string, args map[string]interface{}) (interface{}, error) {
 	prepareData := func(token *Tokens, cookies map[string]string) url.Values {
 		cookies["PassportDeviceId"] = token.DeviceId
 		return signData(uri, args, token.Sids[MiioSid].Ssecurity)
@@ -41,7 +40,7 @@ func (miio *IOService) Request(uri string, args map[string]interface{}) (map[str
 	if err != nil {
 		return nil, err
 	}
-	result, ok := resp["result"].(map[string]interface{})
+	result, ok := resp["result"].(interface{})
 	if !ok {
 		return nil, fmt.Errorf("error %s: %v", uri, resp)
 	}
@@ -53,12 +52,12 @@ func (miio *IOService) DeviceList(getVirtualModel bool, getHuamiDevices int) (de
 		"getVirtualModel": getVirtualModel,
 		"getHuamiDevices": getHuamiDevices,
 	}
-	var result map[string]interface{}
+	var result interface{}
 	result, err = miio.Request("/home/device_list", data)
 	if err != nil {
 		return nil, err
 	}
-	deviceList := result["list"].([]interface{})
+	deviceList := result.(map[string]interface{})["list"].([]interface{})
 	devices = make([]*DeviceInfo, len(deviceList))
 	for i, item := range deviceList {
 		device := item.(map[string]interface{})
@@ -72,7 +71,7 @@ func (miio *IOService) DeviceList(getVirtualModel bool, getHuamiDevices int) (de
 	return
 }
 
-func (miio *IOService) HomeRequest(did, method string, params interface{}) (map[string]interface{}, error) {
+func (miio *IOService) HomeRequest(did, method string, params interface{}) (interface{}, error) {
 	data := map[string]interface{}{
 		"id":        1,
 		"method":    method,
@@ -82,7 +81,7 @@ func (miio *IOService) HomeRequest(did, method string, params interface{}) (map[
 	return miio.Request("/home/rpc/"+did, data)
 }
 
-func (miio *IOService) HomeGetProps(did string, props []string) (map[string]interface{}, error) {
+func (miio *IOService) HomeGetProps(did string, props []string) (interface{}, error) {
 	return miio.HomeRequest(did, "get_prop", props)
 }
 
@@ -91,7 +90,7 @@ func (miio *IOService) HomeGetProp(did, prop string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return results[prop], nil
+	return results.(map[string]interface{})[prop], nil
 }
 
 func (miio *IOService) HomeSetProps(did string, props map[string]interface{}) (map[string]int, error) {
@@ -111,14 +110,14 @@ func (miio *IOService) HomeSetProp(did, prop string, value interface{}) (int, er
 	if err != nil {
 		return 0, err
 	}
-	if result["result"] == "ok" {
+	if result.(map[string]interface{})["result"] == "ok" {
 		return 0, nil
 	}
 	return -1, nil
 }
 
 // ----------------- miot -----------------
-func (miio *IOService) MiotRequest(cmd string, params interface{}) (map[string]interface{}, error) {
+func (miio *IOService) MiotRequest(cmd string, params interface{}) (interface{}, error) {
 	return miio.Request("/miotspec/"+cmd, map[string]interface{}{"params": params})
 }
 
@@ -135,15 +134,13 @@ func (miio *IOService) MiotGetProps(did string, props [][]interface{}) ([]interf
 	if err != nil {
 		return nil, err
 	}
-
-	values := make([]interface{}, len(result))
-	for i, it := range result {
-		index, _ := strconv.Atoi(i)
+	values := make([]interface{}, len(result.([]interface{})))
+	for i, it := range result.([]interface{}) {
 		itm := it.(map[string]interface{})
-		if code, ok := itm["code"].(int); ok && code == 0 {
-			values[index] = itm["value"]
+		if code, ok := itm["code"].(float64); ok && code == 0 {
+			values[i] = itm["value"]
 		} else {
-			values[index] = nil
+			values[i] = nil
 		}
 	}
 	return values, nil
@@ -157,7 +154,7 @@ func (miio *IOService) MiotGetProp(did string, prop []interface{}) (interface{},
 	return results[0], nil
 }
 
-func (miio *IOService) MiotSetProps(did string, props [][]interface{}) ([]int, error) {
+func (miio *IOService) MiotSetProps(did string, props [][]interface{}) ([]float64, error) {
 	params := make([]map[string]interface{}, len(props))
 	index := 0
 	for _, prop := range props {
@@ -174,16 +171,15 @@ func (miio *IOService) MiotSetProps(did string, props [][]interface{}) ([]int, e
 		return nil, err
 	}
 
-	codes := make([]int, len(result))
-	for i, it := range result {
-		ii, _ := strconv.Atoi(i)
+	codes := make([]float64, len(result.([]interface{})))
+	for i, it := range result.([]interface{}) {
 		itm := it.(map[string]interface{})
-		codes[ii] = itm["code"].(int)
+		codes[i] = itm["code"].(float64)
 	}
 	return codes, nil
 }
 
-func (miio *IOService) MiotSetProp(did string, prop []interface{}) (int, error) {
+func (miio *IOService) MiotSetProp(did string, prop []interface{}) (float64, error) {
 	results, err := miio.MiotSetProps(did, [][]interface{}{prop})
 	if err != nil {
 		return 0, err
@@ -191,7 +187,7 @@ func (miio *IOService) MiotSetProp(did string, prop []interface{}) (int, error) 
 	return results[0], nil
 }
 
-func (miio *IOService) MiotAction(did string, iid []int, args []interface{}) (int, error) {
+func (miio *IOService) MiotAction(did string, iid []int, args []interface{}) (float64, error) {
 	result, err := miio.MiotRequest("action", map[string]interface{}{
 		"did":  did,
 		"siid": iid[0],
@@ -201,5 +197,5 @@ func (miio *IOService) MiotAction(did string, iid []int, args []interface{}) (in
 	if err != nil {
 		return -1, err
 	}
-	return result["code"].(int), nil
+	return result.(map[string]interface{})["code"].(float64), nil
 }
