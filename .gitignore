@@ -21,5 +21,6 @@
 # Go workspace file
 go.work
 .idea
+conf.ini
 
 

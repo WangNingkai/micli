@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"gopkg.in/ini.v1"
 	"micli/miservice"
 	"os"
 	"strings"
@@ -15,17 +16,44 @@ var rootCmd = &cobra.Command{
 	Short: "MiService - XiaoMi Cloud Service",
 	Long:  `XiaoMi Cloud Service for mi.com`,
 	Run: func(cmd *cobra.Command, args []string) {
-		tokenPath := fmt.Sprintf("%s/.mi.token", os.Getenv("HOME"))
-		account := miservice.NewAccount(
-			os.Getenv("MI_USER"),
-			os.Getenv("MI_PASS"),
-			"cn",
-			miservice.NewTokenStore(tokenPath),
-		)
 		var (
 			result interface{}
 			err    error
 		)
+		confPath := "conf.ini"
+		if !Exists(confPath) {
+			// 创建初始配置文件
+			f, err := CreatNestedFile(confPath)
+			defer f.Close()
+			if err != nil {
+				fmt.Printf("Fail to create config file: %v", err)
+				return
+			}
+			// 写入配置文件
+			_, err = f.WriteString(defaultConf)
+			if err != nil {
+				fmt.Printf("Fail to write config file: %v", err)
+				return
+			}
+
+			fmt.Println("Please config your account first!")
+			return
+		}
+
+		var cfg *ini.File
+		cfg, err = ini.Load(confPath)
+		if err != nil {
+			fmt.Printf("Fail to read config file: %v", err)
+			return
+		}
+		tokenPath := fmt.Sprintf("%s/.mi.token", os.Getenv("HOME"))
+		account := miservice.NewAccount(
+			cfg.Section("account").Key("MI_USER").MustString(""),
+			cfg.Section("account").Key("MI_PASS").MustString(""),
+			cfg.Section("account").Key("REGION").MustString("cn"),
+			miservice.NewTokenStore(tokenPath),
+		)
+
 		command := strings.Join(args, " ")
 		if len(args) == 0 {
 			result = miservice.IOCommandHelp("", "micli")
@@ -41,7 +69,7 @@ var rootCmd = &cobra.Command{
 				}
 			} else {
 				srv := miservice.NewIOService(account)
-				result, err = miservice.IOCommand(srv, os.Getenv("MI_DID"), command, args[0]+" ")
+				result, err = miservice.IOCommand(srv, cfg.Section("account").Key("MI_DID").MustString(""), command, args[0]+" ")
 			}
 		}
 
@@ -67,10 +95,10 @@ func Execute() {
 
 func init() {
 	rootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
-		fmt.Printf("Usage: The following variables must be set:\n")
-		fmt.Printf("           export MI_USER=<Username>\n")
-		fmt.Printf("           export MI_PASS=<Password>\n")
-		fmt.Printf("           export MI_DID=<Device ID|Name>\n\n")
+		fmt.Printf("Usage: Please set the local [conf.ini] file first :\n")
+		fmt.Printf("           MI_USER=<Username>\n")
+		fmt.Printf("           MI_PASS=<Password>\n")
+		fmt.Printf("           MI_DID=<Device ID|Name>\n\n")
 		fmt.Printf(miservice.IOCommandHelp("", "micli"))
 		return nil
 	})
