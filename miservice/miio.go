@@ -40,6 +40,7 @@ func (miio *IOService) Request(uri string, args map[string]interface{}) (interfa
 	if err != nil {
 		return nil, err
 	}
+	//fmt.Println(resp)
 	result, ok := resp["result"].(interface{})
 	if !ok {
 		return nil, fmt.Errorf("error %s: %v", uri, resp)
