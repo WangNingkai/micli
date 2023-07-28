@@ -27,7 +27,7 @@ Call MiIO: {prefix} /<uri> <data>
 Devs List: {prefix} list [name=full|name_keyword] [getVirtualModel=false|true] [getHuamiDevices=0|1]
            {prefix} list Light true 0
 		   
-MIoT Spec: {prefix} spec [model_keyword|type_urn] [format=text|python|json]
+MIoT Spec: {prefix} spec [model_keyword|type_urn]
            {prefix} spec
            {prefix} spec speaker
            {prefix} spec xiaomi.wifispeaker.lx04
@@ -45,7 +45,6 @@ func IOCommandHelp(did string, prefix string) string {
 	} else {
 		quote = "'"
 	}
-
 	tmp := strings.ReplaceAll(template, "{prefix}", prefix)
 	tmp = strings.ReplaceAll(tmp, "{quote}", quote)
 	if did == "" {
@@ -55,33 +54,30 @@ func IOCommandHelp(did string, prefix string) string {
 	return tmp
 }
 
-func IOCommand(service *IOService, did string, text string, prefix string) (interface{}, error) {
-	cmd, arg := twinsSplit(text, " ", "")
-	//if strings.HasPrefix(cmd, "/") {
-	//    return service.Request(cmd, arg)
-	//}
-	//
-	if strings.HasPrefix(cmd, "prop") || cmd == "action" {
+func IOCommand(srv *IOService, did string, command string, prefix string) (interface{}, error) {
+	cmd, arg := twinsSplit(command, " ", "")
+	if strings.HasPrefix(cmd, "prop") || cmd == "action" || strings.HasPrefix(cmd, "/") {
 		var args map[string]interface{}
 		if err := json.Unmarshal([]byte(arg), &args); err != nil {
 			return nil, err
 		}
-		return service.Request(cmd, args)
+		return srv.Request(cmd, args)
 	}
 
 	argv := strings.Split(arg, " ")
-	argc := len(argv)
-	var arg0 string
-	if argc > 0 {
+	argLen := len(argv)
+	var arg0, arg1, arg2, arg3 string
+	if argLen > 0 {
 		arg0 = argv[0]
 	}
-	var arg1 string
-	if argc > 1 {
+	if argLen > 1 {
 		arg1 = argv[1]
 	}
-	var arg2 string
-	if argc > 2 {
+	if argLen > 2 {
 		arg2 = argv[2]
+	}
+	if argLen > 3 {
+		arg3 = argv[3]
 	}
 	switch cmd {
 	case "list":
@@ -93,22 +89,20 @@ func IOCommand(service *IOService, did string, text string, prefix string) (inte
 		if arg2 != "" {
 			a2, _ = strconv.Atoi(arg2)
 		}
-		return service.DeviceList(a1, a2) // Implement this method for the IOService
+		return srv.DeviceList(a1, a2)
 	case "spec":
-		return service.IotSpec(arg0) // Implement this method for the IOService
+		return srv.MiotSpec(arg0)
 	case "decode":
-		if argc > 3 && argv[3] == "gzip" {
-			return service.IotDecode(argv[0], argv[1], argv[2], true) // Implement this method for the IOService
+		if arg3 == "gzip" {
+			return srv.MiotDecode(arg0, arg1, arg2, true)
 		}
-		return service.IotDecode(argv[0], argv[1], argv[2], false) // Implement this method for the IOService
+		return srv.MiotDecode(arg0, arg1, arg2, false)
 	}
-
 	if did == "" || cmd == "" || cmd == "help" || cmd == "-h" || cmd == "--help" {
 		return IOCommandHelp(did, prefix), nil
 	}
-
 	if !isDigit(did) {
-		devices, err := service.DeviceList(false, 0) // Implement this method for the IOService
+		devices, err := srv.DeviceList(false, 0) // Implement this method for the IOService
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +116,6 @@ func IOCommand(service *IOService, did string, text string, prefix string) (inte
 			}
 		}
 	}
-
 	var props [][]interface{}
 	setp := true
 	miot := true
@@ -146,7 +139,7 @@ func IOCommand(service *IOService, did string, text string, prefix string) (inte
 		props = append(props, prop)
 	}
 
-	if miot && argc > 0 {
+	if miot && argLen > 0 {
 		var args []interface{}
 		if arg != "#NA" {
 			for _, a := range argv {
@@ -154,7 +147,6 @@ func IOCommand(service *IOService, did string, text string, prefix string) (inte
 			}
 		}
 		var ids []int
-
 		for _, id := range props[0] {
 			if v, ok := id.(int); ok {
 				ids = append(ids, v)
@@ -164,7 +156,7 @@ func IOCommand(service *IOService, did string, text string, prefix string) (inte
 				}
 			}
 		}
-		return service.MiotAction(did, ids, args)
+		return srv.MiotAction(did, ids, args)
 	}
 
 	return nil, errors.New("Unknown command: " + cmd)

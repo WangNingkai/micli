@@ -7,29 +7,8 @@ import (
 	"net/url"
 )
 
-type AIService struct {
+type MinaService struct {
 	account *Account
-}
-
-func NewAIService(account *Account) *AIService {
-	return &AIService{
-		account: account,
-	}
-}
-
-func (mnas *AIService) Request(uri string, data url.Values, out any) error {
-	requestId := "app_ios_" + getRandom(30)
-	if data != nil {
-		data["requestId"] = []string{requestId}
-	} else {
-		uri += "&requestId=" + requestId
-	}
-
-	headers := http.Header{
-		"User-Agent": []string{"MiHome/6.0.103 (com.xiaomi.mihome; build:6.0.103.1; iOS 14.4.0) Alamofire/6.0.103 MICO/iOSApp/appStore/6.0.103"},
-	}
-
-	return mnas.account.Request("micoapi", "https://api2.mina.mi.com"+uri, data, nil, headers, true, out)
 }
 
 type DeviceData struct {
@@ -80,59 +59,9 @@ type DeviceData struct {
 }
 
 type Devices struct {
-	Code    int          `json:"code"`
-	Message string       `json:"message"`
-	Data    []DeviceData `json:"data"`
-}
-
-func (mnas *AIService) DeviceList(master int) (devices []DeviceData, err error) {
-	var res Devices
-	err = mnas.Request(fmt.Sprintf("/admin/v2/device_list?master=%d", master), nil, &res)
-	if err != nil {
-		return nil, err
-	}
-
-	return res.Data, nil
-}
-
-func (mnas *AIService) UbusRequest(deviceId, method, path string, message map[string]interface{}, res any) error {
-	messageJSON, _ := json.Marshal(message)
-	data := url.Values{
-		"deviceId": []string{deviceId},
-		"message":  []string{string(messageJSON)},
-		"method":   []string{method},
-		"path":     []string{path},
-	}
-
-	err := mnas.Request("/remote/ubus", data, res)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (mnas *AIService) TextToSpeech(deviceId, text string) (map[string]interface{}, error) {
-	var res map[string]interface{}
-	err := mnas.UbusRequest(deviceId, "text_to_speech", "mibrain", map[string]interface{}{"text": text}, &res)
-	return res, err
-}
-
-func (mnas *AIService) PlayerSetVolume(deviceId string, volume int) (map[string]interface{}, error) {
-	var res map[string]interface{}
-	err := mnas.UbusRequest(deviceId, "player_set_volume", "mediaplayer", map[string]interface{}{"volume": volume, "media": "app_ios"}, &res)
-	return res, err
-}
-
-func (mnas *AIService) PlayerPause(deviceId string) (map[string]interface{}, error) {
-	var res map[string]interface{}
-	err := mnas.UbusRequest(deviceId, "player_play_operation", "mediaplayer", map[string]interface{}{"action": "pause", "media": "app_ios"}, &res)
-	return res, err
-}
-
-func (mnas *AIService) PlayerPlay(deviceId string) (map[string]interface{}, error) {
-	var res map[string]interface{}
-	err := mnas.UbusRequest(deviceId, "player_play_operation", "mediaplayer", map[string]interface{}{"action": "play", "media": "app_ios"}, &res)
-	return res, err
+	Code    int           `json:"code"`
+	Message string        `json:"message"`
+	Data    []*DeviceData `json:"data"`
 }
 
 type PlayerStatus struct {
@@ -144,33 +73,103 @@ type PlayerStatus struct {
 	} `json:"data"`
 }
 
-func (mnas *AIService) PlayerGetStatus(deviceId string) (
-	*PlayerStatus, error) {
-	var res PlayerStatus
-	err := mnas.UbusRequest(deviceId, "player_get_play_status", "mediaplayer", map[string]interface{}{"media": "app_ios"}, &res)
-	return &res, err
+func NewMinaService(account *Account) *MinaService {
+	return &MinaService{
+		account: account,
+	}
 }
 
-func (mnas *AIService) PlayByUrl(deviceId, url string) (map[string]interface{}, error) {
+func (mina *MinaService) Request(uri string, data url.Values, out any) error {
+	requestId := "app_ios_" + getRandom(30)
+	if data != nil {
+		data["requestId"] = []string{requestId}
+	} else {
+		uri += "&requestId=" + requestId
+	}
+
+	headers := http.Header{
+		"User-Agent": []string{"MiHome/6.0.103 (com.xiaomi.mihome; build:6.0.103.1; iOS 14.4.0) Alamofire/6.0.103 MICO/iOSApp/appStore/6.0.103"},
+	}
+
+	return mina.account.Request("micoapi", fmt.Sprintf("https://api2.mina.mi.com%s", uri), data, nil, headers, true, out)
+}
+
+func (mina *MinaService) DeviceList(master int) (devices []*DeviceData, err error) {
+	var res *Devices
+	err = mina.Request(fmt.Sprintf("/admin/v2/device_list?master=%d", master), nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res.Data, nil
+}
+
+func (mina *MinaService) UbusRequest(deviceId, method, path string, message map[string]interface{}, res any) error {
+	messageJSON, _ := json.Marshal(message)
+	data := url.Values{
+		"deviceId": []string{deviceId},
+		"message":  []string{string(messageJSON)},
+		"method":   []string{method},
+		"path":     []string{path},
+	}
+
+	err := mina.Request("/remote/ubus", data, res)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (mina *MinaService) TextToSpeech(deviceId, text string) (map[string]interface{}, error) {
 	var res map[string]interface{}
-	err := mnas.UbusRequest(deviceId, "player_play_url", "mediaplayer", map[string]interface{}{"url": url, "type": 1, "media": "app_ios"}, &res)
+	err := mina.UbusRequest(deviceId, "text_to_speech", "mibrain", map[string]interface{}{"text": text}, &res)
 	return res, err
 }
 
-func (mnas *AIService) SendMessage(devices []DeviceData, devno int, message string, volume *int) (bool, error) {
+func (mina *MinaService) PlayerSetVolume(deviceId string, volume int) (map[string]interface{}, error) {
+	var res map[string]interface{}
+	err := mina.UbusRequest(deviceId, "player_set_volume", "mediaplayer", map[string]interface{}{"volume": volume, "media": "app_ios"}, &res)
+	return res, err
+}
+
+func (mina *MinaService) PlayerPause(deviceId string) (map[string]interface{}, error) {
+	var res map[string]interface{}
+	err := mina.UbusRequest(deviceId, "player_play_operation", "mediaplayer", map[string]interface{}{"action": "pause", "media": "app_ios"}, &res)
+	return res, err
+}
+
+func (mina *MinaService) PlayerPlay(deviceId string) (map[string]interface{}, error) {
+	var res map[string]interface{}
+	err := mina.UbusRequest(deviceId, "player_play_operation", "mediaplayer", map[string]interface{}{"action": "play", "media": "app_ios"}, &res)
+	return res, err
+}
+
+func (mina *MinaService) PlayerGetStatus(deviceId string) (
+	*PlayerStatus, error) {
+	var res PlayerStatus
+	err := mina.UbusRequest(deviceId, "player_get_play_status", "mediaplayer", map[string]interface{}{"media": "app_ios"}, &res)
+	return &res, err
+}
+
+func (mina *MinaService) PlayByUrl(deviceId, url string) (map[string]interface{}, error) {
+	var res map[string]interface{}
+	err := mina.UbusRequest(deviceId, "player_play_url", "mediaplayer", map[string]interface{}{"url": url, "type": 1, "media": "app_ios"}, &res)
+	return res, err
+}
+
+func (mina *MinaService) SendMessage(devices []*DeviceData, devNo int, message string, volume *int) (bool, error) {
 	result := false
 	for i, device := range devices {
-		if devno == -1 || devno != i+1 || device.Capabilities.Yunduantts != 0 {
+		if devNo == -1 || devNo != i+1 || device.Capabilities.Yunduantts != 0 {
 			deviceId := device.DeviceID
 			if volume != nil {
-				res, err := mnas.PlayerSetVolume(deviceId, *volume)
+				res, err := mina.PlayerSetVolume(deviceId, *volume)
 				result = err == nil && res != nil
 			}
 			if message != "" {
-				res, err := mnas.TextToSpeech(deviceId, message)
+				res, err := mina.TextToSpeech(deviceId, message)
 				result = err == nil && res != nil
 			}
-			if devno != -1 || !result {
+			if devNo != -1 || !result {
 				break
 			}
 		}

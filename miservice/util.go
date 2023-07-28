@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
+	mathRand "math/rand"
 	"net/url"
 	"strconv"
 	"strings"
@@ -18,10 +19,8 @@ import (
 	"unicode"
 )
 
-var r = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-// any is an alias for interface{}
 func getRandom(length int) string {
+	var r = mathRand.New(mathRand.NewSource(time.Now().UnixNano()))
 	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	randomStr := make([]byte, length)
 	for i := range randomStr {
@@ -30,8 +29,8 @@ func getRandom(length int) string {
 	return string(randomStr)
 }
 
-func signNonce(ssecurity string, nonce string) (string, error) {
-	decodedSsecurity, err := base64.StdEncoding.DecodeString(ssecurity)
+func signNonce(sSecurity string, nonce string) (string, error) {
+	decodedSSecurity, err := base64.StdEncoding.DecodeString(sSecurity)
 	if err != nil {
 		return "", err
 	}
@@ -42,12 +41,12 @@ func signNonce(ssecurity string, nonce string) (string, error) {
 	}
 
 	hash := sha256.New()
-	hash.Write(decodedSsecurity)
+	hash.Write(decodedSSecurity)
 	hash.Write(decodedNonce)
 	return base64.StdEncoding.EncodeToString(hash.Sum(nil)), nil
 }
 
-var genNonce = func() string {
+func genNonce() string {
 	nonce := make([]byte, 12)
 	_, err := rand.Read(nonce[:8])
 	if err != nil {
@@ -57,7 +56,7 @@ var genNonce = func() string {
 	return base64.StdEncoding.EncodeToString(nonce)
 }
 
-func signData(uri string, data any, ssecurity string) url.Values {
+func signData(uri string, data any, sSecurity string) url.Values {
 	var dataStr []byte
 	if s, ok := data.(string); ok {
 		dataStr = []byte(s)
@@ -70,12 +69,12 @@ func signData(uri string, data any, ssecurity string) url.Values {
 	}
 
 	encodedNonce := genNonce()
-	snonce, err := signNonce(ssecurity, encodedNonce)
+	sNonce, err := signNonce(sSecurity, encodedNonce)
 	if err != nil {
 		return nil
 	}
-	msg := fmt.Sprintf("%s&%s&%s&data=%s", uri, snonce, encodedNonce, dataStr)
-	sb, _ := base64.StdEncoding.DecodeString(snonce)
+	msg := fmt.Sprintf("%s&%s&%s&data=%s", uri, sNonce, encodedNonce, dataStr)
+	sb, _ := base64.StdEncoding.DecodeString(sNonce)
 	sign := hmac.New(sha256.New, sb)
 	sign.Write([]byte(msg))
 	signature := base64.StdEncoding.EncodeToString(sign.Sum(nil))

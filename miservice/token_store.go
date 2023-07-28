@@ -50,16 +50,16 @@ func (mts *FileTokenStore) LoadToken() (*Tokens, error) {
 	return &tokens, err
 }
 
-func (mts *FileTokenStore) SaveToken(tokens *Tokens) error {
-	var err error
+func (mts *FileTokenStore) SaveToken(tokens *Tokens) (err error) {
 	if tokens != nil {
-		data, err := json.MarshalIndent(tokens, "", "  ")
+		var data []byte
+		data, err = json.MarshalIndent(tokens, "", "  ")
 		if err != nil {
-			return err
+			return
 		}
 		err = os.WriteFile(mts.tokenPath, data, 0644)
 		if err != nil {
-			return err
+			return
 		}
 	} else {
 		err = os.Remove(mts.tokenPath)
@@ -67,7 +67,7 @@ func (mts *FileTokenStore) SaveToken(tokens *Tokens) error {
 			err = nil
 		}
 	}
-	return err
+	return
 }
 
 type DummyTokenStore struct {

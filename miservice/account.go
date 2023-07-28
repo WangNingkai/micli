@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -21,9 +20,45 @@ type Account struct {
 	password   string
 	tokenStore TokenStore
 	token      *Tokens
+	region     string
 }
 
-func NewAccount(username string, password string, tokenStore TokenStore) *Account {
+type loginResp struct {
+	Qs             string      `json:"qs"`
+	Ssecurity      string      `json:"ssecurity"`
+	Code           int         `json:"code"`
+	PassToken      string      `json:"passToken"`
+	Description    string      `json:"description"`
+	SecurityStatus int         `json:"securityStatus"`
+	Nonce          int64       `json:"nonce"`
+	UserID         int         `json:"userId"`
+	CUserID        string      `json:"cUserId"`
+	Result         string      `json:"result"`
+	Psecurity      string      `json:"psecurity"`
+	CaptchaURL     interface{} `json:"captchaUrl"`
+	Location       string      `json:"location"`
+	Pwd            int         `json:"pwd"`
+	Child          int         `json:"child"`
+	Desc           string      `json:"desc"`
+	ServiceParam   string      `json:"serviceParam"`
+	Sign           string      `json:"_sign"`
+	Sid            string      `json:"sid"`
+	Callback       string      `json:"callback"`
+}
+
+func secureUrl(location, sSecurity string, nonce int64) string {
+	sNonce := fmt.Sprintf("nonce=%d&%s", nonce, sSecurity)
+	sum := sha1.Sum([]byte(sNonce))
+	clientSign := base64.StdEncoding.EncodeToString(sum[:])
+	es := url.QueryEscape(clientSign)
+	//es = strings.ReplaceAll(es, "%2F", "/")
+	requestUrl := fmt.Sprintf("%s&clientSign=%s", location, es)
+	return requestUrl
+}
+
+type DataCb func(tokens *Tokens, cookie map[string]string) url.Values
+
+func NewAccount(username, password, region string, tokenStore TokenStore) *Account {
 	j, _ := cookiejar.New(nil)
 	return &Account{
 		client: &http.Client{
@@ -45,7 +80,8 @@ func (ma *Account) Login(sid string) error {
 	}()
 	if ma.token == nil {
 		if ma.tokenStore != nil {
-			tokens, err := ma.tokenStore.LoadToken()
+			var tokens *Tokens
+			tokens, err = ma.tokenStore.LoadToken()
 			if err == nil {
 				if tokens.UserName != ma.username {
 					_ = ma.tokenStore.SaveToken(nil)
@@ -89,11 +125,11 @@ func (ma *Account) Login(sid string) error {
 		}
 		resp, err = ma.serviceLogin("serviceLoginAuth2", data, cookies)
 		if err != nil {
-			log.Println("serviceLoginAuth2 error", err)
+			//log.Println("serviceLoginAuth2 error", err)
 			return err
 		}
 		if resp.Code != 0 {
-			return fmt.Errorf("Code Error: %v", resp)
+			return fmt.Errorf("code Error: %v", resp)
 		}
 	}
 	ma.token.UserId = fmt.Sprint(resp.UserID)
@@ -102,7 +138,7 @@ func (ma *Account) Login(sid string) error {
 	var serviceToken string
 	serviceToken, err = ma.securityTokenService(resp.Location, resp.Ssecurity, resp.Nonce)
 	if err != nil {
-		log.Println("securityTokenService error", err)
+		//log.Println("securityTokenService error", err)
 		return err
 	}
 	ma.token.Sids[sid] = SidToken{
@@ -117,30 +153,6 @@ func (ma *Account) Login(sid string) error {
 	return nil
 }
 
-type loginResp struct {
-	Qs             string      `json:"qs"`
-	Ssecurity      string      `json:"ssecurity"`
-	Code           int         `json:"code"`
-	PassToken      string      `json:"passToken"`
-	Description    string      `json:"description"`
-	SecurityStatus int         `json:"securityStatus"`
-	Nonce          int64       `json:"nonce"`
-	UserID         int         `json:"userId"`
-	CUserID        string      `json:"cUserId"`
-	Result         string      `json:"result"`
-	Psecurity      string      `json:"psecurity"`
-	CaptchaURL     interface{} `json:"captchaUrl"`
-	Location       string      `json:"location"`
-	Pwd            int         `json:"pwd"`
-	Child          int         `json:"child"`
-	Desc           string      `json:"desc"`
-
-	ServiceParam string `json:"serviceParam"`
-	Sign         string `json:"_sign"`
-	Sid          string `json:"sid"`
-	Callback     string `json:"callback"`
-}
-
 func (ma *Account) serviceLogin(uri string, data url.Values, cookies []*http.Cookie) (*loginResp, error) {
 	headers := http.Header{
 		"User-Agent": []string{UA},
@@ -152,49 +164,39 @@ func (ma *Account) serviceLogin(uri string, data url.Values, cookies []*http.Coo
 		method = http.MethodPost
 		headers.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
-	req, _ := http.NewRequest(method, "https://account.xiaomi.com/pass/"+uri, reqBody)
+	req, _ := http.NewRequest(method, fmt.Sprintf("https://account.xiaomi.com/pass/%s", uri), reqBody)
 	req.Header = headers
 
 	for _, cookie := range cookies {
 		req.AddCookie(cookie)
 	}
-	log.Println("service login", req.URL.String())
+	//log.Println("service login", req.URL.String())
 	resp, err := ma.client.Do(req)
 	if err != nil {
-		log.Println("http do request error", err)
+		//log.Println("http do request error", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
-	log.Println("service login return", resp.StatusCode)
-
-	body, err := io.ReadAll(resp.Body)
+	//log.Println("service login return", resp.StatusCode)
+	var body []byte
+	body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	log.Println("body", string(body))
+	//log.Println("body", string(body))
 	var jsonResponse loginResp
 	err = json.Unmarshal(body[11:], &jsonResponse)
 	if err != nil {
-		log.Println("json unmarshal error", err, string(body))
+		//log.Println("json unmarshal error", err, string(body))
 		return nil, err
 	}
-	log.Println("service login success", jsonResponse)
+	//log.Println("service login success", jsonResponse)
 	return &jsonResponse, nil
 }
 
-func secureUrl(location, ssecurity string, nonce int64) string {
-	nsec := fmt.Sprintf("nonce=%d&%s", nonce, ssecurity)
-	sum := sha1.Sum([]byte(nsec))
-	clientSign := base64.StdEncoding.EncodeToString(sum[:])
-	es := url.QueryEscape(clientSign)
-	//es = strings.ReplaceAll(es, "%2F", "/")
-	requestUrl := fmt.Sprintf("%s&clientSign=%s", location, es)
-	return requestUrl
-}
-
-func (ma *Account) securityTokenService(location, ssecurity string, nonce int64) (string, error) {
-	requestUrl := secureUrl(location, ssecurity, nonce)
-	log.Println("securityTokenService", requestUrl)
+func (ma *Account) securityTokenService(location, sSecurity string, nonce int64) (string, error) {
+	requestUrl := secureUrl(location, sSecurity, nonce)
+	//log.Println("securityTokenService", requestUrl)
 	req, _ := http.NewRequest(http.MethodGet, requestUrl, nil)
 	headers := http.Header{
 		"User-Agent": []string{UA},
@@ -225,8 +227,6 @@ func (ma *Account) securityTokenService(location, ssecurity string, nonce int64)
 	return serviceToken, nil
 }
 
-type DataCb func(tokens *Tokens, cookie map[string]string) url.Values
-
 func (ma *Account) NewRequest(sid, u string, data url.Values, cb DataCb, headers http.Header) *http.Request {
 	var req *http.Request
 	var body io.Reader
@@ -234,24 +234,22 @@ func (ma *Account) NewRequest(sid, u string, data url.Values, cb DataCb, headers
 		{Name: "userId", Value: ma.token.UserId},
 		{Name: "serviceToken", Value: ma.token.Sids[sid].ServiceToken},
 	}
-	fmt.Println("tokens", ma.token)
-
+	//fmt.Println("tokens", ma.token)
 	method := http.MethodGet
 	if data != nil || cb != nil {
-		var vals url.Values
+		var values url.Values
 		if cb != nil {
 			var cookieMap = make(map[string]string)
-			vals = cb(ma.token, cookieMap)
+			values = cb(ma.token, cookieMap)
 			for k, v := range cookieMap {
 				cookies = append(cookies, &http.Cookie{Name: k, Value: v})
 			}
 		} else if data != nil {
-			vals = data
+			values = data
 		}
-		if vals != nil {
+		if values != nil {
 			method = http.MethodPost
-			log.Println("request data", vals.Encode())
-			body = strings.NewReader(vals.Encode())
+			body = strings.NewReader(values.Encode())
 			headers.Set("Content-Type", "application/x-www-form-urlencoded")
 		}
 	}
@@ -262,9 +260,9 @@ func (ma *Account) NewRequest(sid, u string, data url.Values, cb DataCb, headers
 	for _, cookie := range cookies {
 		req.AddCookie(cookie)
 	}
-	for k, v := range cookies {
+	/*for k, v := range cookies {
 		log.Println("request cookie", k, v)
-	}
+	}*/
 	return req
 }
 
@@ -283,34 +281,31 @@ func (ma *Account) Request(sid, u string, data url.Values, cb DataCb, headers ht
 			return err
 		}
 	}
-	log.Println("request token done")
+	//log.Println("request token done")
 	req := ma.NewRequest(sid, u, data, cb, headers)
 	resp, err := ma.client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode == http.StatusOK {
 		type _result struct {
 			Code    int    `json:"code"`
 			Message string `json:"message"`
 		}
-		data, err := io.ReadAll(resp.Body)
+		var rs []byte
+		rs, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
-		log.Println("response", u, string(data))
-		var result _result
-		err = json.Unmarshal(data, &result)
-		if err != nil {
-			return err
-		}
+		//log.Println("response", u, string(rs))
+		var result *_result
+		err = json.Unmarshal(rs, &result)
 		if err != nil {
 			return err
 		}
 		if result.Code == 0 {
-			err = json.Unmarshal(data, output)
+			err = json.Unmarshal(rs, output)
 			return err
 		}
 
@@ -322,13 +317,11 @@ func (ma *Account) Request(sid, u string, data url.Values, cb DataCb, headers ht
 	if resp.StatusCode == http.StatusUnauthorized && reLogin {
 		ma.token = nil
 		if ma.tokenStore != nil {
-			ma.tokenStore.SaveToken(nil)
+			_ = ma.tokenStore.SaveToken(nil)
 		}
 		return ma.Request(sid, u, data, cb, headers, false, output)
 	}
 
 	body, _ := io.ReadAll(resp.Body)
-	return fmt.Errorf("Error %s: %s", u, string(body))
+	return fmt.Errorf("error %s: %s", u, string(body))
 }
-
-const UA = "APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS"

@@ -27,13 +27,9 @@ func parseDesc(desc string) (string, string) {
 	return name, ""
 }
 
-func makeLine(siid, iid int, desc, comment string, readable bool, format string) string {
+func makeLine(siid, iid int, desc, comment string, readable bool) string {
 	var value string
-	if format == "python" {
-		value = fmt.Sprintf("(%d, %d)", siid, iid)
-	} else {
-		value = fmt.Sprintf("%d", iid)
-	}
+	value = fmt.Sprintf("(%d, %d)", siid, iid)
 
 	prefix := ""
 	if !readable {
@@ -112,7 +108,7 @@ type MiotSpecInstancesData struct {
 	} `json:"services"`
 }
 
-func (s *IOService) IotSpec(kind string) (string, error) {
+func (s *IOService) MiotSpec(kind string) (string, error) {
 	if kind == "" || !strings.HasPrefix(kind, "urn") {
 		p := path.Join(os.TempDir(), "miot-spec.json")
 		specs, err := loadSpec(p)
@@ -153,7 +149,7 @@ func (s *IOService) IotSpec(kind string) (string, error) {
 			break
 		}
 	}
-	u := "http://miot-spec.org/miot-spec-v2/instance?type=" + kind
+	u := fmt.Sprintf("https://miot-spec.org/miot-spec-v2/instance?type=%s", kind)
 	rs, err := s.account.client.Get(u)
 	if err != nil {
 		return "", err
@@ -233,7 +229,7 @@ func (s *IOService) IotSpec(kind string) (string, error) {
 	return "", nil
 }
 
-func (s *IOService) IotDecode(ssecurity string, nonce string, data string, gzip bool) (interface{}, error) {
+func (s *IOService) MiotDecode(ssecurity string, nonce string, data string, gzip bool) (interface{}, error) {
 	signNonceStr, err := signNonce(ssecurity, nonce)
 	if err != nil {
 		return nil, err
@@ -248,7 +244,6 @@ func (s *IOService) IotDecode(ssecurity string, nonce string, data string, gzip 
 	}
 
 	cipher.XORKeyStream(key[:1024], key[:1024])
-
 	encryptedData, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		return nil, err

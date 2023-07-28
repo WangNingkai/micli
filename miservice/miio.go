@@ -12,41 +12,6 @@ type IOService struct {
 	server  string
 }
 
-const MiioSid = "xiaomiio"
-
-func NewIOService(account *Account, region *string) *IOService {
-	server := "https://"
-	if region != nil && *region != "cn" {
-		server += *region + "."
-	}
-	server += "api.io.mi.com/app"
-	return &IOService{account: account, server: server}
-}
-
-func (s *IOService) Request(uri string, data map[string]interface{}) (map[string]interface{}, error) {
-	prepareData := func(token *Tokens, cookies map[string]string) url.Values {
-		cookies["PassportDeviceId"] = token.DeviceId
-		return signData(uri, data, token.Sids[MiioSid].Ssecurity)
-	}
-
-	headers := http.Header{
-		"User-Agent":                 []string{"iOS-14.4-6.0.103-iPhone12,3--D7744744F7AF32F0544445285880DD63E47D9BE9-8816080-84A3F44E137B71AE-iPhone"},
-		"x-xiaomi-protocal-flag-cli": []string{"PROTOCAL-HTTP2"},
-	}
-	var resp map[string]interface{}
-	err := s.account.Request(MiioSid, s.server+uri, nil, prepareData, headers, true, &resp)
-	if err != nil {
-		return nil, err
-	}
-
-	result, ok := resp["result"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("error %s: %v", uri, resp)
-	}
-
-	return result, nil
-}
-
 type DeviceInfo struct {
 	Name  string `json:"name"`
 	Model string `json:"model"`
@@ -54,21 +19,55 @@ type DeviceInfo struct {
 	Token string `json:"token"`
 }
 
-func (s *IOService) DeviceList(getVirtualModel bool, getHuamiDevices int) (devices []DeviceInfo, err error) {
+type Iid struct {
+	Siid int `json:"siid"`
+	Piid int `json:"piid"`
+}
+
+func NewIOService(account *Account) *IOService {
+	server := "https://api.io.mi.com/app"
+	if account.region != "" && account.region != "cn" {
+		server = fmt.Sprintf("https://%miio.api.io.mi.com/app", account.region)
+	}
+	return &IOService{account: account, server: server}
+}
+
+func (miio *IOService) Request(uri string, args map[string]interface{}) (map[string]interface{}, error) {
+	prepareData := func(token *Tokens, cookies map[string]string) url.Values {
+		cookies["PassportDeviceId"] = token.DeviceId
+		return signData(uri, args, token.Sids[MiioSid].Ssecurity)
+	}
+	headers := http.Header{
+		"User-Agent":                 []string{"iOS-14.4-6.0.103-iPhone12,3--D7744744F7AF32F0544445285880DD63E47D9BE9-8816080-84A3F44E137B71AE-iPhone"},
+		"x-xiaomi-protocal-flag-cli": []string{"PROTOCAL-HTTP2"},
+	}
+	var resp map[string]interface{}
+	err := miio.account.Request(MiioSid, miio.server+uri, nil, prepareData, headers, true, &resp)
+	if err != nil {
+		return nil, err
+	}
+	result, ok := resp["result"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("error %s: %v", uri, resp)
+	}
+	return result, nil
+}
+
+func (miio *IOService) DeviceList(getVirtualModel bool, getHuamiDevices int) (devices []*DeviceInfo, err error) {
 	data := map[string]interface{}{
 		"getVirtualModel": getVirtualModel,
 		"getHuamiDevices": getHuamiDevices,
 	}
-	result, err := s.Request("/home/device_list", data)
+	var result map[string]interface{}
+	result, err = miio.Request("/home/device_list", data)
 	if err != nil {
 		return nil, err
 	}
 	deviceList := result["list"].([]interface{})
-
-	devices = make([]DeviceInfo, len(deviceList))
+	devices = make([]*DeviceInfo, len(deviceList))
 	for i, item := range deviceList {
 		device := item.(map[string]interface{})
-		devices[i] = DeviceInfo{
+		devices[i] = &DeviceInfo{
 			Name:  device["name"].(string),
 			Model: device["model"].(string),
 			Did:   device["did"].(string),
@@ -78,24 +77,24 @@ func (s *IOService) DeviceList(getVirtualModel bool, getHuamiDevices int) (devic
 	return
 }
 
-func (s *IOService) HomeRequest(did, method string, params interface{}) (map[string]interface{}, error) {
+func (miio *IOService) HomeRequest(did, method string, params interface{}) (map[string]interface{}, error) {
 	data := map[string]interface{}{
 		"id":        1,
 		"method":    method,
 		"accessKey": "IOS00026747c5acafc2",
 		"params":    params,
 	}
-	return s.Request("/home/rpc/"+did, data)
+	return miio.Request("/home/rpc/"+did, data)
 }
 
-func (s *IOService) HomeGetProps(did string, props []string) (map[string]interface{}, error) {
-	return s.HomeRequest(did, "get_prop", props)
+func (miio *IOService) HomeGetProps(did string, props []string) (map[string]interface{}, error) {
+	return miio.HomeRequest(did, "get_prop", props)
 }
 
-func (s *IOService) HomeSetProps(did string, props map[string]interface{}) (map[string]int, error) {
+func (miio *IOService) HomeSetProps(did string, props map[string]interface{}) (map[string]int, error) {
 	results := make(map[string]int, len(props))
 	for prop, value := range props {
-		result, err := s.HomeSetProp(did, prop, value)
+		result, err := miio.HomeSetProp(did, prop, value)
 		if err != nil {
 			return nil, err
 		}
@@ -104,16 +103,16 @@ func (s *IOService) HomeSetProps(did string, props map[string]interface{}) (map[
 	return results, nil
 }
 
-func (s *IOService) HomeGetProp(did, prop string) (interface{}, error) {
-	results, err := s.HomeGetProps(did, []string{prop})
+func (miio *IOService) HomeGetProp(did, prop string) (interface{}, error) {
+	results, err := miio.HomeGetProps(did, []string{prop})
 	if err != nil {
 		return nil, err
 	}
 	return results[prop], nil
 }
 
-func (s *IOService) HomeSetProp(did, prop string, value interface{}) (int, error) {
-	result, err := s.HomeRequest(did, "set_"+prop, value)
+func (miio *IOService) HomeSetProp(did, prop string, value interface{}) (int, error) {
+	result, err := miio.HomeRequest(did, "set_"+prop, value)
 	if err != nil {
 		return 0, err
 	}
@@ -125,16 +124,11 @@ func (s *IOService) HomeSetProp(did, prop string, value interface{}) (int, error
 
 //----------------- miot -----------------
 
-func (s *IOService) MiotRequest(cmd string, params interface{}) (map[string]interface{}, error) {
-	return s.Request("/miotspec/"+cmd, map[string]interface{}{"params": params})
+func (miio *IOService) MiotRequest(cmd string, params interface{}) (map[string]interface{}, error) {
+	return miio.Request("/miotspec/"+cmd, map[string]interface{}{"params": params})
 }
 
-type Iid struct {
-	Siid int `json:"siid"`
-	Piid int `json:"piid"`
-}
-
-func (s *IOService) MiotGetProps(did string, iids []Iid) ([]interface{}, error) {
+func (miio *IOService) MiotGetProps(did string, iids []Iid) ([]interface{}, error) {
 	params := make([]map[string]interface{}, len(iids))
 	for i, iid := range iids {
 		params[i] = map[string]interface{}{
@@ -143,7 +137,7 @@ func (s *IOService) MiotGetProps(did string, iids []Iid) ([]interface{}, error) 
 			"piid": iid.Piid,
 		}
 	}
-	result, err := s.MiotRequest("prop/get", params)
+	result, err := miio.MiotRequest("prop/get", params)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +155,7 @@ func (s *IOService) MiotGetProps(did string, iids []Iid) ([]interface{}, error) 
 	return values, nil
 }
 
-func (s *IOService) MiotSetProps(did string, props map[Iid]interface{}) ([]int, error) {
+func (miio *IOService) MiotSetProps(did string, props map[Iid]interface{}) ([]int, error) {
 	params := make([]map[string]interface{}, len(props))
 	index := 0
 	for i, prop := range props {
@@ -173,38 +167,38 @@ func (s *IOService) MiotSetProps(did string, props map[Iid]interface{}) ([]int, 
 		}
 		index++
 	}
-	result, err := s.MiotRequest("prop/set", params)
+	result, err := miio.MiotRequest("prop/set", params)
 	if err != nil {
 		return nil, err
 	}
 
 	codes := make([]int, len(result))
 	for i, it := range result {
-		index, _ := strconv.Atoi(i)
+		ii, _ := strconv.Atoi(i)
 		itm := it.(map[string]interface{})
-		codes[index] = itm["code"].(int)
+		codes[ii] = itm["code"].(int)
 	}
 	return codes, nil
 }
 
-func (s *IOService) MiotGetProp(did string, iid Iid) (interface{}, error) {
-	results, err := s.MiotGetProps(did, []Iid{iid})
+func (miio *IOService) MiotGetProp(did string, iid Iid) (interface{}, error) {
+	results, err := miio.MiotGetProps(did, []Iid{iid})
 	if err != nil {
 		return nil, err
 	}
 	return results[0], nil
 }
 
-func (s *IOService) MiotSetProp(did string, iid Iid, value interface{}) (int, error) {
-	results, err := s.MiotSetProps(did, map[Iid]interface{}{iid: value})
+func (miio *IOService) MiotSetProp(did string, iid Iid, value interface{}) (int, error) {
+	results, err := miio.MiotSetProps(did, map[Iid]interface{}{iid: value})
 	if err != nil {
 		return 0, err
 	}
 	return results[0], nil
 }
 
-func (s *IOService) MiotAction(did string, iid []int, args []interface{}) (int, error) {
-	result, err := s.MiotRequest("action", map[string]interface{}{
+func (miio *IOService) MiotAction(did string, iid []int, args []interface{}) (int, error) {
+	result, err := miio.MiotRequest("action", map[string]interface{}{
 		"did":  did,
 		"siid": iid[0],
 		"aiid": iid[1],

@@ -19,23 +19,29 @@ var rootCmd = &cobra.Command{
 		account := miservice.NewAccount(
 			os.Getenv("MI_USER"),
 			os.Getenv("MI_PASS"),
+			"cn",
 			miservice.NewTokenStore(tokenPath),
 		)
-		var result interface{}
-		var err error
-		text := strings.Join(args, " ")
+		var (
+			result interface{}
+			err    error
+		)
+		command := strings.Join(args, " ")
+		if len(args) == 0 {
+			args = append(args, "help")
+		}
 		if args[0] == "mina" {
-			service := miservice.NewAIService(account)
-			deviceList, err := service.DeviceList(0)
-			if err == nil && len(text) > 4 {
-				_, _ = service.SendMessage(deviceList, -1, text[4:], nil)
+			srv := miservice.NewMinaService(account)
+			deviceList, err := srv.DeviceList(0)
+			if err == nil && len(command) > 4 {
+				_, _ = srv.SendMessage(deviceList, -1, command[4:], nil)
 				result = "Message sent!"
 			} else {
 				result = deviceList
 			}
 		} else {
-			service := miservice.NewIOService(account, nil)
-			result, err = miservice.IOCommand(service, os.Getenv("MI_DID"), text, args[0]+" ")
+			srv := miservice.NewIOService(account)
+			result, err = miservice.IOCommand(srv, os.Getenv("MI_DID"), command, args[0]+" ")
 		}
 
 		if err != nil {
