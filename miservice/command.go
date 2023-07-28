@@ -56,6 +56,9 @@ func IOCommandHelp(did string, prefix string) string {
 
 func IOCommand(srv *IOService, did string, command string, prefix string) (interface{}, error) {
 	cmd, arg := twinsSplit(command, " ", "")
+	if cmd == "" || cmd == "help" || cmd == "-h" || cmd == "--help" {
+		return IOCommandHelp(did, prefix), nil
+	}
 	if strings.HasPrefix(cmd, "prop") || cmd == "action" || strings.HasPrefix(cmd, "/") {
 		var args map[string]interface{}
 		if err := json.Unmarshal([]byte(arg), &args); err != nil {
@@ -63,7 +66,6 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (inter
 		}
 		return srv.Request(cmd, args)
 	}
-
 	argv := strings.Split(arg, " ")
 	argLen := len(argv)
 	var arg0, arg1, arg2, arg3 string
@@ -98,8 +100,9 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (inter
 		}
 		return srv.MiotDecode(arg0, arg1, arg2, false)
 	}
-	if did == "" || cmd == "" || cmd == "help" || cmd == "-h" || cmd == "--help" {
-		return IOCommandHelp(did, prefix), nil
+
+	if did == "" {
+		return nil, errors.New("DID not set")
 	}
 	if !isDigit(did) {
 		devices, err := srv.DeviceList(false, 0) // Implement this method for the IOService
@@ -139,7 +142,7 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (inter
 		props = append(props, prop)
 	}
 
-	if miot && argLen > 0 {
+	if miot && argLen > 0 && arg != "" {
 		var args []interface{}
 		if arg != "#NA" {
 			for _, a := range argv {
@@ -159,5 +162,27 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (inter
 		return srv.MiotAction(did, ids, args)
 	}
 
-	return nil, errors.New("Unknown command: " + cmd)
+	if setp {
+		if miot {
+			return srv.MiotSetProps(did, props)
+		} else {
+			var _props map[string]interface{}
+			for _, prop := range props {
+				_props[prop[0].(string)] = prop[1]
+			}
+			return srv.HomeSetProps(did, _props)
+		}
+	} else {
+		if miot {
+			return srv.MiotGetProps(did, props)
+		} else {
+			var _props []string
+			for _, prop := range props {
+				_props = append(_props, prop[0].(string))
+			}
+			return srv.HomeGetProps(did, _props)
+		}
+	}
+
+	//return nil, errors.New("Unknown command: " + cmd)
 }

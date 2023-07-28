@@ -28,20 +28,21 @@ var rootCmd = &cobra.Command{
 		)
 		command := strings.Join(args, " ")
 		if len(args) == 0 {
-			args = append(args, "help")
-		}
-		if args[0] == "mina" {
-			srv := miservice.NewMinaService(account)
-			deviceList, err := srv.DeviceList(0)
-			if err == nil && len(command) > 4 {
-				_, _ = srv.SendMessage(deviceList, -1, command[4:], nil)
-				result = "Message sent!"
-			} else {
-				result = deviceList
-			}
+			result = miservice.IOCommandHelp("", "micli")
 		} else {
-			srv := miservice.NewIOService(account)
-			result, err = miservice.IOCommand(srv, os.Getenv("MI_DID"), command, args[0]+" ")
+			if args[0] == "mina" {
+				srv := miservice.NewMinaService(account)
+				deviceList, err := srv.DeviceList(0)
+				if err == nil && len(command) > 4 {
+					_, _ = srv.SendMessage(deviceList, -1, command[4:], nil)
+					result = "Message sent!"
+				} else {
+					result = deviceList
+				}
+			} else {
+				srv := miservice.NewIOService(account)
+				result, err = miservice.IOCommand(srv, os.Getenv("MI_DID"), command, args[0]+" ")
+			}
 		}
 
 		if err != nil {
