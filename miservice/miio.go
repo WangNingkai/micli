@@ -20,9 +20,11 @@ type DeviceInfo struct {
 }
 
 func NewIOService(account *Account) *IOService {
-	server := "https://api.io.mi.com/app"
+	host := "api.io.mi.com/app"
+	protocol := "https"
+	server := fmt.Sprintf("%s://%s", protocol, host)
 	if account.region != "" && account.region != "cn" {
-		server = fmt.Sprintf("https://%miio.api.io.mi.com/app", account.region)
+		server = fmt.Sprintf("%s://%s.%s", protocol, account.region, host)
 	}
 	return &IOService{account: account, server: server}
 }
