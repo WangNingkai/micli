@@ -3,7 +3,13 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	inf "github.com/fzdwx/infinite"
+	"github.com/fzdwx/infinite/components/input/text"
+	"github.com/fzdwx/infinite/components/selection/singleselect"
+	"github.com/fzdwx/infinite/theme"
+	"github.com/ttacon/chalk"
 	"gopkg.in/ini.v1"
+	"micli/conf"
 	"micli/miservice"
 	"os"
 	"strings"
@@ -11,80 +17,125 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "micli",
-	Short: "MiService - XiaoMi Cloud Service",
-	Long:  `XiaoMi Cloud Service for mi.com`,
-	Run: func(cmd *cobra.Command, args []string) {
-		var (
-			result interface{}
-			err    error
-		)
-		confPath := "conf.ini"
-		if !Exists(confPath) {
-			// 创建初始配置文件
-			f, err := CreatNestedFile(confPath)
-			defer f.Close()
-			if err != nil {
-				fmt.Printf("Fail to create config file: %v", err)
-				return
-			}
-			// 写入配置文件
-			_, err = f.WriteString(defaultConf)
-			if err != nil {
-				fmt.Printf("Fail to write config file: %v", err)
-				return
-			}
+var (
+	rootCmd = &cobra.Command{
+		Use:   "micli",
+		Short: "MiService - XiaoMi Cloud Service",
+		Long:  `XiaoMi Cloud Service for mi.com`,
+		Run: func(cmd *cobra.Command, args []string) {
+			var (
+				result interface{}
+				err    error
+			)
 
-			fmt.Println("Please config your account first!")
-			return
-		}
-
-		var cfg *ini.File
-		cfg, err = ini.Load(confPath)
-		if err != nil {
-			fmt.Printf("Fail to read config file: %v", err)
-			return
-		}
-		tokenPath := fmt.Sprintf("%s/.mi.token", os.Getenv("HOME"))
-		account := miservice.NewAccount(
-			cfg.Section("account").Key("MI_USER").MustString(""),
-			cfg.Section("account").Key("MI_PASS").MustString(""),
-			cfg.Section("account").Key("REGION").MustString("cn"),
-			miservice.NewTokenStore(tokenPath),
-		)
-
-		command := strings.Join(args, " ")
-		if len(args) == 0 {
-			result = miservice.IOCommandHelp("", "micli")
-		} else {
-			if args[0] == "mina" {
-				srv := miservice.NewMinaService(account)
-				deviceList, err := srv.DeviceList(0)
-				if err == nil && len(command) > 4 {
-					_, _ = srv.SendMessage(deviceList, -1, command[4:], nil)
-					result = "Message sent!"
-				} else {
-					result = deviceList
+			if !Exists(conf.ConfPath) {
+				// 创建初始配置文件
+				f, err := CreatNestedFile(conf.ConfPath)
+				defer f.Close()
+				if err != nil {
+					fmt.Printf("%sFail to create config file: %v", chalk.Red, err)
+					return
 				}
-			} else {
-				srv := miservice.NewIOService(account)
-				result, err = miservice.IOCommand(srv, cfg.Section("account").Key("MI_DID").MustString(""), command, args[0]+" ")
-			}
-		}
+				// 写入配置文件
+				_, err = f.WriteString(conf.DefaultConf)
+				if err != nil {
 
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			if resStr, ok := result.(string); ok {
-				fmt.Println(resStr)
-			} else {
-				resBytes, _ := json.MarshalIndent(result, "", "  ")
-				fmt.Println(string(resBytes))
+					fmt.Printf("%sFail to write config file: %v", chalk.Red, err)
+					return
+				}
+				return
 			}
-		}
-	},
-}
+
+			conf.Cfg, err = ini.Load(conf.ConfPath)
+			if err != nil {
+				fmt.Printf("%sFail to read config file: %v", chalk.Red, err)
+				return
+			}
+			needSave := false
+			if conf.Cfg.Section("account").Key("MI_USER").MustString("") == "" {
+				needSave = true
+				name, _ := inf.NewText(
+					text.WithRequired(),
+					text.WithPrompt("what's your account username?"),
+					text.WithPromptStyle(theme.DefaultTheme.PromptStyle),
+					text.WithDefaultValue(""),
+				).Display()
+				conf.Cfg.Section("account").Key("MI_USER").SetValue(name)
+			}
+			if conf.Cfg.Section("account").Key("MI_PASS").MustString("") == "" {
+				needSave = true
+				pass, _ := inf.NewText(
+					text.WithRequired(),
+					text.WithPrompt("what's your password?"),
+					text.WithPromptStyle(theme.DefaultTheme.PromptStyle),
+					text.WithDefaultValue(""),
+					text.WithDisableOutputResult(),
+					text.WithEchoPassword(),
+				).Display()
+				conf.Cfg.Section("account").Key("MI_PASS").SetValue(pass)
+			}
+			if conf.Cfg.Section("account").Key("REGION").MustString("") == "" {
+				needSave = true
+				opts := []string{"cn(中国大陆)", "de(Europe)", "us(United States)", "i2(India)", "ru(Russia)", "sg(Singapore)", "tw(中國台灣)"}
+				optValues := []string{"cn", "de", "us", "i2", "ru", "sg", "tw"}
+				region, _ := inf.NewSingleSelect(opts,
+					singleselect.WithPrompt("choose your region"),
+					singleselect.WithPromptStyle(theme.DefaultTheme.PromptStyle),
+					singleselect.WithRowRender(func(c string, h string, choice string) string {
+						return fmt.Sprintf("%s [%s] %s", c, h, choice)
+					}),
+				).Display()
+				conf.Cfg.Section("account").Key("REGION").SetValue(optValues[region])
+
+			}
+			if needSave {
+				err = conf.Cfg.SaveTo(conf.ConfPath)
+				if err != nil {
+					fmt.Printf("%sFail to write config file: %v", chalk.Red, err)
+					return
+				}
+			}
+
+			tokenPath := fmt.Sprintf("%s/.mi.token", os.Getenv("HOME"))
+			account := miservice.NewAccount(
+				conf.Cfg.Section("account").Key("MI_USER").MustString(""),
+				conf.Cfg.Section("account").Key("MI_PASS").MustString(""),
+				conf.Cfg.Section("account").Key("REGION").MustString("cn"),
+				miservice.NewTokenStore(tokenPath),
+			)
+
+			command := strings.Join(args, " ")
+			if len(args) == 0 {
+				result = miservice.IOCommandHelp("", "micli")
+			} else {
+				if args[0] == "mina" {
+					srv := miservice.NewMinaService(account)
+					deviceList, err := srv.DeviceList(0)
+					if err == nil && len(command) > 4 {
+						_, _ = srv.SendMessage(deviceList, -1, command[4:], nil)
+						result = "Message sent!"
+					} else {
+						result = deviceList
+					}
+				} else {
+					srv := miservice.NewIOService(account)
+					result, err = miservice.IOCommand(srv, conf.Cfg.Section("account").Key("MI_DID").MustString(""), command, args[0]+" ")
+				}
+			}
+
+			if err != nil {
+				fmt.Println(chalk.Red, err)
+			} else {
+				if resStr, ok := result.(string); ok {
+					fmt.Println(chalk.Bold.TextStyle(resStr))
+				} else {
+					resBytes, _ := json.MarshalIndent(result, "", "  ")
+					fmt.Println(chalk.Green, string(resBytes))
+				}
+			}
+		},
+	}
+)
 
 func Execute() {
 	err := rootCmd.Execute()

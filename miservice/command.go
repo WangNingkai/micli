@@ -3,6 +3,11 @@ package miservice
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	inf "github.com/fzdwx/infinite"
+	"github.com/fzdwx/infinite/components/selection/singleselect"
+	"github.com/fzdwx/infinite/theme"
+	"micli/conf"
 	"strconv"
 	"strings"
 )
@@ -54,15 +59,15 @@ func IOCommandHelp(did string, prefix string) string {
 	return tmp
 }
 
-func IOCommand(srv *IOService, did string, command string, prefix string) (interface{}, error) {
+func IOCommand(srv *IOService, did string, command string, prefix string) (res interface{}, err error) {
 	cmd, arg := twinsSplit(command, " ", "")
 	if cmd == "" || cmd == "help" || cmd == "-h" || cmd == "--help" {
 		return IOCommandHelp(did, prefix), nil
 	}
 	if strings.HasPrefix(cmd, "prop") || cmd == "action" || strings.HasPrefix(cmd, "/") {
 		var args map[string]interface{}
-		if err := json.Unmarshal([]byte(arg), &args); err != nil {
-			return nil, err
+		if err = json.Unmarshal([]byte(arg), &args); err != nil {
+			return
 		}
 		return srv.Request(cmd, args)
 	}
@@ -102,10 +107,35 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (inter
 	}
 
 	if did == "" {
-		return nil, errors.New("DID not set")
+		fmt.Println("default DID not set,please set it first.")
+		deviceMap := make(map[string]string)
+		var devices []*DeviceInfo
+		devices, err = srv.DeviceList(false, 0)
+		choices := make([]string, len(devices))
+		for i, device := range devices {
+			choice := fmt.Sprintf("%s - %s", device.Name, device.Did)
+			deviceMap[choice] = device.Did
+			choices[i] = choice
+		}
+		didIndex, _ := inf.NewSingleSelect(
+			choices,
+			singleselect.WithPrompt("choose your default did"),
+			singleselect.WithPromptStyle(theme.DefaultTheme.PromptStyle),
+			singleselect.WithRowRender(func(c string, h string, choice string) string {
+				return fmt.Sprintf("%s [%s] %s", c, h, choice)
+			}),
+		).Display()
+		choice := choices[didIndex]
+		did = deviceMap[choice]
+		conf.Cfg.Section("account").Key("MI_DID").SetValue(did)
+		err = conf.Cfg.SaveTo(conf.ConfPath)
+		if err != nil {
+			return nil, errors.New("DID not set")
+		}
 	}
 	if !isDigit(did) {
-		devices, err := srv.DeviceList(false, 0) // Implement this method for the IOService
+		var devices []*DeviceInfo
+		devices, err = srv.DeviceList(false, 0) // Implement this method for the IOService
 		if err != nil {
 			return nil, err
 		}
@@ -183,6 +213,4 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (inter
 			return srv.HomeGetProps(did, _props)
 		}
 	}
-
-	//return nil, errors.New("Unknown command: " + cmd)
 }
