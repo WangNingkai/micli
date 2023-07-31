@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"github.com/gosuri/uitable"
 	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
 	"gopkg.in/ini.v1"
 	"micli/conf"
 	"micli/miservice"
 	"os"
-	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -22,21 +20,6 @@ var (
 		Use:   "micli",
 		Short: "MiService - XiaoMi Cloud Service",
 		Long:  `XiaoMi Cloud Service for mi.com`,
-		Run: func(cmd *cobra.Command, args []string) {
-			var (
-				result interface{}
-				err    error
-			)
-			command := strings.Join(args, " ")
-			if len(args) == 0 {
-				err = cmd.Help()
-				return
-			} else {
-				result, err = miservice.IOCommand(srv, conf.Cfg.Section("account").Key("MI_DID").MustString(""), command)
-			}
-
-			handleResult(result, err)
-		},
 	}
 )
 
