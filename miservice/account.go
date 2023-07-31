@@ -313,7 +313,6 @@ func (ma *Account) Request(sid, u string, data url.Values, cb DataCb, headers ht
 			resp.StatusCode = http.StatusUnauthorized
 		}
 	}
-
 	if resp.StatusCode == http.StatusUnauthorized && reLogin {
 		ma.token = nil
 		if ma.tokenStore != nil {
@@ -321,7 +320,6 @@ func (ma *Account) Request(sid, u string, data url.Values, cb DataCb, headers ht
 		}
 		return ma.Request(sid, u, data, cb, headers, false, output)
 	}
-
 	body, _ := io.ReadAll(resp.Body)
 	return fmt.Errorf("error %s: %s", u, string(body))
 }

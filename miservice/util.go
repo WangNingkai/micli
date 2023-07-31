@@ -135,3 +135,8 @@ func isDigit(s string) bool {
 	}
 	return true
 }
+
+func isJSON(str string) bool {
+	var js json.RawMessage
+	return json.Unmarshal([]byte(str), &js) == nil
+}

@@ -35,13 +35,12 @@ func (miio *IOService) Request(uri string, args map[string]interface{}) (interfa
 		"User-Agent":                 []string{"iOS-14.4-6.0.103-iPhone12,3--D7744744F7AF32F0544445285880DD63E47D9BE9-8816080-84A3F44E137B71AE-iPhone"},
 		"x-xiaomi-protocal-flag-cli": []string{"PROTOCAL-HTTP2"},
 	}
-	var resp map[string]interface{}
+	var resp interface{}
 	err := miio.account.Request(MiioSid, miio.server+uri, nil, prepareData, headers, true, &resp)
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Println(resp)
-	result, ok := resp["result"].(interface{})
+	result, ok := resp.(map[string]interface{})["result"].(interface{})
 	if !ok {
 		return nil, fmt.Errorf("error %s: %v", uri, resp)
 	}
@@ -79,7 +78,7 @@ func (miio *IOService) HomeRequest(did, method string, params interface{}) (inte
 		"accessKey": "IOS00026747c5acafc2",
 		"params":    params,
 	}
-	return miio.Request("/home/rpc/"+did, data)
+	return miio.Request(fmt.Sprintf("/home/rpc/%s", did), data)
 }
 
 func (miio *IOService) HomeGetProps(did string, props []string) (interface{}, error) {
@@ -119,7 +118,7 @@ func (miio *IOService) HomeSetProp(did, prop string, value interface{}) (int, er
 
 // ----------------- miot -----------------
 func (miio *IOService) MiotRequest(cmd string, params interface{}) (interface{}, error) {
-	return miio.Request("/miotspec/"+cmd, map[string]interface{}{"params": params})
+	return miio.Request(fmt.Sprintf("/miotspec/%s", cmd), map[string]interface{}{"params": params})
 }
 
 func (miio *IOService) MiotGetProps(did string, props [][]interface{}) ([]interface{}, error) {

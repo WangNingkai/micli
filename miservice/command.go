@@ -35,8 +35,8 @@ Devs List: {prefix} list [name=full|name_keyword] [getVirtualModel=false|true] [
 MIoT Spec: {prefix} spec [model_keyword|type_urn]
            {prefix} spec
            {prefix} spec speaker
-           {prefix} spec xiaomi.wifispeaker.lx04
-           {prefix} spec urn:miot-spec-v2:device:speaker:0000A015:xiaomi-lx04:1
+           {prefix} spec xiaomi.wifispeaker.lx06
+           {prefix} spec urn:miot-spec-v2:device:speaker:0000A015:xiaomi-lx06:1
 		   
 MIoT Decode: {prefix} decode <ssecurity> <nonce> <data> [gzip]
 
@@ -64,13 +64,18 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (res i
 	if cmd == "" || cmd == "help" || cmd == "-h" || cmd == "--help" {
 		return IOCommandHelp(did, prefix), nil
 	}
-	if strings.HasPrefix(cmd, "prop") || cmd == "action" || strings.HasPrefix(cmd, "/") {
-		var args map[string]interface{}
-		if err = json.Unmarshal([]byte(arg), &args); err != nil {
-			return
+	if strings.HasPrefix(cmd, "/") {
+		if isJSON(arg) {
+			var args map[string]interface{}
+			if err = json.Unmarshal([]byte(arg), &args); err != nil {
+				return
+			}
+			return srv.Request(cmd, args)
 		}
-		return srv.Request(cmd, args)
+		err = errors.New("unsupported command")
+		return
 	}
+
 	argv := strings.Split(arg, " ")
 	argLen := len(argv)
 	var arg0, arg1, arg2, arg3 string
@@ -149,6 +154,16 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (res i
 			}
 		}
 	}
+	if strings.HasPrefix(cmd, "prop") || cmd == "action" {
+		if isJSON(arg) {
+			var params []map[string]interface{}
+			if err = json.Unmarshal([]byte(arg), &params); err != nil {
+				return
+			}
+			return srv.MiotRequest(cmd, params)
+		}
+	}
+
 	var props [][]interface{}
 	setp := true
 	miot := true
