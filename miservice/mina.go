@@ -3,6 +3,7 @@ package miservice
 import (
 	"encoding/json"
 	"fmt"
+	"micli/pkg/util"
 	"net/http"
 	"net/url"
 )
@@ -80,7 +81,7 @@ func NewMinaService(account *Account) *MinaService {
 }
 
 func (mina *MinaService) Request(uri string, data url.Values, out any) error {
-	requestId := "app_ios_" + getRandom(30)
+	requestId := "app_ios_" + util.GetRandom(30)
 	if data != nil {
 		data["requestId"] = []string{requestId}
 	} else {

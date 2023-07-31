@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"micli/pkg/util"
 	"net/http"
 	"os"
 	"path"
@@ -151,7 +152,7 @@ func (s *IOService) MiotSpec(kind string) (string, error) {
 }
 
 func (s *IOService) MiotDecode(ssecurity string, nonce string, data string, gzip bool) (interface{}, error) {
-	signNonceStr, err := signNonce(ssecurity, nonce)
+	signNonceStr, err := util.SignNonce(ssecurity, nonce)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +174,7 @@ func (s *IOService) MiotDecode(ssecurity string, nonce string, data string, gzip
 	cipher.XORKeyStream(decrypted, encryptedData)
 
 	if gzip {
-		decrypted, err = unzip(decrypted)
+		decrypted, err = util.Unzip(decrypted)
 		if err != nil {
 			return nil, err
 		}

@@ -2,6 +2,7 @@ package miservice
 
 import (
 	"fmt"
+	"micli/pkg/util"
 	"net/http"
 	"net/url"
 )
@@ -29,7 +30,7 @@ func NewIOService(account *Account) *IOService {
 func (miio *IOService) Request(uri string, args map[string]interface{}) (interface{}, error) {
 	prepareData := func(token *Tokens, cookies map[string]string) url.Values {
 		cookies["PassportDeviceId"] = token.DeviceId
-		return signData(uri, args, token.Sids[MiioSid].Ssecurity)
+		return util.SignData(uri, args, token.Sids[MiioSid].Ssecurity)
 	}
 	headers := http.Header{
 		"User-Agent":                 []string{"iOS-14.4-6.0.103-iPhone12,3--D7744744F7AF32F0544445285880DD63E47D9BE9-8816080-84A3F44E137B71AE-iPhone"},

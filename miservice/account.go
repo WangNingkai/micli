@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"micli/pkg/util"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -94,7 +95,7 @@ func (ma *Account) Login(sid string) error {
 	if ma.token == nil {
 		ma.token = NewTokens()
 		ma.token.UserName = ma.username
-		ma.token.DeviceId = strings.ToUpper(getRandom(16))
+		ma.token.DeviceId = strings.ToUpper(util.GetRandom(16))
 	}
 
 	cookies := []*http.Cookie{

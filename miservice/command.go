@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gosuri/uitable"
 	"github.com/pterm/pterm"
 	"micli/conf"
+	"micli/pkg/util"
 	"strconv"
 	"strings"
 )
@@ -60,13 +60,10 @@ func IOCommandHelp(did string, prefix string) string {
 	return tmp
 }
 
-func IOCommand(srv *IOService, did string, command string, prefix string) (res interface{}, err error) {
-	cmd, arg := twinsSplit(command, " ", "")
-	if cmd == "" || cmd == "help" || cmd == "-h" || cmd == "--help" {
-		return IOCommandHelp(did, prefix), nil
-	}
+func IOCommand(srv *IOService, did string, command string) (res interface{}, err error) {
+	cmd, arg := util.TwinsSplit(command, " ", "")
 	if strings.HasPrefix(cmd, "/") {
-		if isJSON(arg) {
+		if util.IsJSON(arg) {
 			var args map[string]interface{}
 			if err = json.Unmarshal([]byte(arg), &args); err != nil {
 				return
@@ -79,54 +76,6 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (res i
 
 	argv := strings.Split(arg, " ")
 	argLen := len(argv)
-	var arg0, arg1, arg2, arg3 string
-	if argLen > 0 {
-		arg0 = argv[0]
-	}
-	if argLen > 1 {
-		arg1 = argv[1]
-	}
-	if argLen > 2 {
-		arg2 = argv[2]
-	}
-	if argLen > 3 {
-		arg3 = argv[3]
-	}
-	switch cmd {
-	case "list":
-		a1 := false
-		if arg1 != "" {
-			a1, _ = strconv.ParseBool(arg1)
-		}
-		a2 := 0
-		if arg2 != "" {
-			a2, _ = strconv.Atoi(arg2)
-		}
-		var devices []*DeviceInfo
-		devices, err = srv.DeviceList(a1, a2)
-		if err != nil {
-			return
-		}
-		table := uitable.New()
-		table.MaxColWidth = 80
-		table.Wrap = true // wrap columns
-		for _, device := range devices {
-			table.AddRow("") // blank
-			table.AddRow("Name:", device.Name)
-			table.AddRow("Did:", device.Did)
-			table.AddRow("Model:", device.Model)
-			table.AddRow("Token:", device.Token)
-			table.AddRow("") // blank
-		}
-		return table, nil
-	case "spec":
-		return srv.MiotSpec(arg0)
-	case "decode":
-		if arg3 == "gzip" {
-			return srv.MiotDecode(arg0, arg1, arg2, true)
-		}
-		return srv.MiotDecode(arg0, arg1, arg2, false)
-	}
 
 	if did == "" {
 		pterm.Warning.Println("default DID not set,please set it first.")
@@ -155,7 +104,7 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (res i
 			return nil, errors.New("DID not set")
 		}
 	}
-	if !isDigit(did) {
+	if !util.IsDigit(did) {
 		var devices []*DeviceInfo
 		devices, err = srv.DeviceList(false, 0) // Implement this method for the IOService
 		if err != nil {
@@ -171,8 +120,9 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (res i
 			}
 		}
 	}
+
 	if strings.HasPrefix(cmd, "prop") || cmd == "action" {
-		if isJSON(arg) {
+		if util.IsJSON(arg) {
 			var params []map[string]interface{}
 			if err = json.Unmarshal([]byte(arg), &params); err != nil {
 				return
@@ -185,10 +135,10 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (res i
 	setp := true
 	miot := true
 	for _, item := range strings.Split(cmd, ",") {
-		key, value := twinsSplit(item, "=", "")
-		siid, iid := twinsSplit(key, "-", "1")
+		key, value := util.TwinsSplit(item, "=", "")
+		siid, iid := util.TwinsSplit(key, "-", "1")
 		var prop []interface{}
-		if isDigit(siid) && isDigit(iid) {
+		if util.IsDigit(siid) && util.IsDigit(iid) {
 			s, _ := strconv.Atoi(siid)
 			i, _ := strconv.Atoi(iid)
 			prop = []interface{}{s, i}
@@ -199,7 +149,7 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (res i
 		if value == "" {
 			setp = false
 		} else if setp {
-			prop = append(prop, stringOrValue(value))
+			prop = append(prop, util.StringOrValue(value))
 		}
 		props = append(props, prop)
 	}
@@ -208,7 +158,7 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (res i
 		var args []interface{}
 		if arg != "#NA" {
 			for _, a := range argv {
-				args = append(args, stringOrValue(a))
+				args = append(args, util.StringOrValue(a))
 			}
 		}
 		var ids []int
