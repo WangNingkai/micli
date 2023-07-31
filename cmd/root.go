@@ -7,6 +7,7 @@ import (
 	"github.com/fzdwx/infinite/components/input/text"
 	"github.com/fzdwx/infinite/components/selection/singleselect"
 	"github.com/fzdwx/infinite/theme"
+	"github.com/gosuri/uitable"
 	"github.com/ttacon/chalk"
 	"gopkg.in/ini.v1"
 	"micli/conf"
@@ -127,7 +128,9 @@ var (
 				fmt.Println(chalk.Red, err)
 			} else {
 				if resStr, ok := result.(string); ok {
-					fmt.Println(chalk.Bold.TextStyle(resStr))
+					fmt.Println(chalk.Green, resStr)
+				} else if table, ok := result.(*uitable.Table); ok {
+					fmt.Println(chalk.Green, table)
 				} else {
 					resBytes, _ := json.MarshalIndent(result, "", "  ")
 					fmt.Println(chalk.Green, string(resBytes))

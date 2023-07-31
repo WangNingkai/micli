@@ -7,6 +7,7 @@ import (
 	inf "github.com/fzdwx/infinite"
 	"github.com/fzdwx/infinite/components/selection/singleselect"
 	"github.com/fzdwx/infinite/theme"
+	"github.com/gosuri/uitable"
 	"micli/conf"
 	"strconv"
 	"strings"
@@ -101,7 +102,23 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (res i
 		if arg2 != "" {
 			a2, _ = strconv.Atoi(arg2)
 		}
-		return srv.DeviceList(a1, a2)
+		var devices []*DeviceInfo
+		devices, err = srv.DeviceList(a1, a2)
+		if err != nil {
+			return
+		}
+		table := uitable.New()
+		table.MaxColWidth = 80
+		table.Wrap = true // wrap columns
+		for _, device := range devices {
+			table.AddRow("") // blank
+			table.AddRow("Name:", device.Name)
+			table.AddRow("Did:", device.Did)
+			table.AddRow("Model:", device.Model)
+			table.AddRow("Token:", device.Token)
+			table.AddRow("") // blank
+		}
+		return table, nil
 	case "spec":
 		return srv.MiotSpec(arg0)
 	case "decode":
