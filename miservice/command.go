@@ -39,6 +39,8 @@ MIoT Spec: {prefix} spec [model_keyword|type_urn]
 		   
 MIoT Decode: {prefix} decode <ssecurity> <nonce> <data> [gzip]
 
+Reset Account: {prefix} reset 
+
 `
 
 func IOCommandHelp(did string, prefix string) string {

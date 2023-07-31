@@ -8,6 +8,7 @@ import (
 	"gopkg.in/ini.v1"
 	"micli/conf"
 	"micli/miservice"
+	"micli/pkg/util"
 	"os"
 	"strings"
 
@@ -25,9 +26,18 @@ var (
 				err    error
 			)
 
-			if !Exists(conf.ConfPath) {
+			if len(args) >= 1 && args[0] == "reset" {
+				confirm, _ := pterm.DefaultInteractiveConfirm.Show("Are you sure to reset config file?")
+				if confirm {
+					conf.Reset()
+					pterm.Info.Println("Config file has been reset.")
+					return
+				}
+			}
+
+			if !util.Exists(conf.ConfPath) {
 				// 创建初始配置文件
-				f, err := CreatNestedFile(conf.ConfPath)
+				f, err := util.CreatNestedFile(conf.ConfPath)
 				defer f.Close()
 				if err != nil {
 					pterm.Error.Printf("Fail to create config file: %v", err)
@@ -42,24 +52,38 @@ var (
 				}
 				return
 			}
-
 			conf.Cfg, err = ini.Load(conf.ConfPath)
 			if err != nil {
 				pterm.Error.Printf("Fail to read config file: %v", err)
 				return
 			}
+			var name, pass, region string
 			needSave := false
-			if conf.Cfg.Section("account").Key("MI_USER").MustString("") == "" {
+			name = conf.Cfg.Section("account").Key("MI_USER").MustString("")
+			pass = conf.Cfg.Section("account").Key("MI_PASS").MustString("")
+			region = conf.Cfg.Section("account").Key("REGION").MustString("")
+			if name == "" || pass == "" || region == "" {
+				pterm.Warning.Println("Please complete your account information")
+			}
+			if name == "" {
 				needSave = true
-				name, _ := pterm.DefaultInteractiveTextInput.WithDefaultText("what's your account username?").Show()
+				name, err = pterm.DefaultInteractiveTextInput.Show("Enter your account username")
+				if err != nil {
+					pterm.Error.Printf("Fail to get your account username: %v", err)
+					return
+				}
 				conf.Cfg.Section("account").Key("MI_USER").SetValue(name)
 			}
-			if conf.Cfg.Section("account").Key("MI_PASS").MustString("") == "" {
+			if pass == "" {
 				needSave = true
-				pass, _ := pterm.DefaultInteractiveTextInput.WithDefaultText("what's your account password?").Show()
+				pass, err = pterm.DefaultInteractiveTextInput.WithMask("*").Show("Enter your password")
+				if err != nil {
+					pterm.Error.Printf("Fail to get your account password: %v", err)
+					return
+				}
 				conf.Cfg.Section("account").Key("MI_PASS").SetValue(pass)
 			}
-			if conf.Cfg.Section("account").Key("REGION").MustString("") == "" {
+			if region == "" {
 				needSave = true
 				opts := []string{"中国大陆", "Europe", "United States", "India", "Russia", "Singapore", "中國台灣"}
 				regionMap := map[string]string{
@@ -71,13 +95,17 @@ var (
 					"Singapore":     "sg",
 					"中國台灣":          "tw",
 				}
-
-				region, _ := pterm.DefaultInteractiveSelect.
+				var regionI string
+				regionI, err = pterm.DefaultInteractiveSelect.
 					WithOptions(opts).
-					WithDefaultText("what's your account region?").
-					Show()
-
-				conf.Cfg.Section("account").Key("REGION").SetValue(regionMap[region])
+					WithDefaultOption("中国大陆").
+					Show("Choose your account region")
+				if err != nil {
+					pterm.Error.Printf("Fail to get your account region: %v", err)
+					return
+				}
+				region = regionMap[regionI]
+				conf.Cfg.Section("account").Key("REGION").SetValue(region)
 
 			}
 			if needSave {
@@ -89,7 +117,6 @@ var (
 				pterm.Success.Println("Config saved!Please rerun the command.")
 				return
 			}
-
 			tokenPath := fmt.Sprintf("%s/.mi.token", os.Getenv("HOME"))
 			account := miservice.NewAccount(
 				conf.Cfg.Section("account").Key("MI_USER").MustString(""),
