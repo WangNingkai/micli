@@ -21,3 +21,7 @@ var (
 		},
 	}
 )
+
+func init() {
+	specCmd.Example = "  spec\n  spec speaker\n  spec xiaomi.wifispeaker.lx06\n  spec urn:miot-spec-v2:device:speaker:0000A015:xiaomi-lx06:1"
+}

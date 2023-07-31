@@ -89,4 +89,5 @@ var (
 
 func init() {
 	propsGetCmd.Flags().StringVarP(&did, "did", "d", "", "Device ID")
+	propsGetCmd.Example = "  get 1,1-2,1-3,1-4,2-1,2-2,3"
 }

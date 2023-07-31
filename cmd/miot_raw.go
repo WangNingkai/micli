@@ -8,7 +8,7 @@ import (
 
 var (
 	miotRawCmd = &cobra.Command{
-		Use:   "miot_raw [uri] [data]",
+		Use:   "miot_raw <cmd> <params>",
 		Short: "Call MIoT Raw Command",
 		Long:  `Call MIoT Raw Command`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -28,3 +28,7 @@ var (
 		},
 	}
 )
+
+func init() {
+	miotRawCmd.Example = "  miot_raw prop/get '[{\"did\":\"636889807\",\"siid\":2,\"piid\":1}]'\n  miot_raw <prop/get|prop/set|action> <params>"
+}

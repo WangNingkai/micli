@@ -6,7 +6,7 @@ import (
 
 var (
 	decodeCmd = &cobra.Command{
-		Use:   "decode [ssecurity] [nonce] [data] [gzip]",
+		Use:   "decode <ssecurity> <nonce> <data> [gzip]",
 		Short: "MIoT Decode",
 		Long:  `MIoT Decode`,
 		Run: func(cmd *cobra.Command, args []string) {

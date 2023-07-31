@@ -8,7 +8,7 @@ import (
 
 var (
 	miioRawCmd = &cobra.Command{
-		Use:   "miio_raw [uri] [data]",
+		Use:   "miio_raw /<uri> <data>",
 		Short: "Call MIIO Raw Command",
 		Long:  `Call MIIO Raw Command`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -28,3 +28,7 @@ var (
 		},
 	}
 )
+
+func init() {
+	miioRawCmd.Example = "  miio_raw /home/device_list '{\"getVirtualModel\":false,\"getHuamiDevices\":1}'\n  miio_raw /<uri> <data>"
+}

@@ -22,7 +22,7 @@ Do Action: {prefix} <siid[-piid]> <arg1|#NA> [...]
            {prefix} 5 Hello
            {prefix} 5-4 Hello #1
 
-Call MIoT: {prefix} <cmd=prop/get|/prop/set|action> <params>
+Call MIoT: {prefix} <cmd=prop/get|prop/set|action> <params>
            {prefix} action {quote}{{"did":"{did}","siid":5,"aiid":1,"in":["Hello"]}}{quote}
 		   
 Call MiIO: {prefix} /<uri> <data>

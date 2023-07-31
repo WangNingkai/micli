@@ -92,4 +92,5 @@ var (
 
 func init() {
 	propsSetCmd.Flags().StringVarP(&did, "did", "d", "", "Device ID")
+	propsSetCmd.Example = "  set 2=#60,2-2=#false,3=test"
 }

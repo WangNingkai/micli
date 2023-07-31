@@ -52,3 +52,7 @@ var (
 		},
 	}
 )
+
+func init() {
+	listCmd.Example = "  list Light true 0"
+}

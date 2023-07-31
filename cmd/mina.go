@@ -8,7 +8,7 @@ import (
 
 var (
 	minaCmd = &cobra.Command{
-		Use:   "mina [command]",
+		Use:   "mina <command>",
 		Short: "Mina Service",
 		Long:  `Mina Service`,
 		Run: func(cmd *cobra.Command, args []string) {
