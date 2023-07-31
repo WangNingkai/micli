@@ -169,10 +169,6 @@ func Execute() {
 
 func init() {
 	rootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
-		fmt.Printf("Usage: Please set the local [conf.ini] file first :\n")
-		fmt.Printf("           MI_USER=<Username>\n")
-		fmt.Printf("           MI_PASS=<Password>\n")
-		fmt.Printf("           MI_DID=<Device ID|Name>\n\n")
 		fmt.Printf(miservice.IOCommandHelp("", "micli"))
 		return nil
 	})
