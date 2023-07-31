@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	inf "github.com/fzdwx/infinite"
-	"github.com/fzdwx/infinite/components/selection/singleselect"
-	"github.com/fzdwx/infinite/theme"
 	"github.com/gosuri/uitable"
+	"github.com/pterm/pterm"
 	"micli/conf"
 	"strconv"
 	"strings"
@@ -129,7 +127,7 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (res i
 	}
 
 	if did == "" {
-		fmt.Println("default DID not set,please set it first.")
+		pterm.Warning.Println("default DID not set,please set it first.")
 		deviceMap := make(map[string]string)
 		var devices []*DeviceInfo
 		devices, err = srv.DeviceList(false, 0)
@@ -139,19 +137,19 @@ func IOCommand(srv *IOService, did string, command string, prefix string) (res i
 			deviceMap[choice] = device.Did
 			choices[i] = choice
 		}
-		didIndex, _ := inf.NewSingleSelect(
-			choices,
-			singleselect.WithPrompt("choose your default did"),
-			singleselect.WithPromptStyle(theme.DefaultTheme.PromptStyle),
-			singleselect.WithRowRender(func(c string, h string, choice string) string {
-				return fmt.Sprintf("%s [%s] %s", c, h, choice)
-			}),
-		).Display()
-		choice := choices[didIndex]
+
+		choice, _ := pterm.DefaultInteractiveSelect.
+			WithDefaultText("Please select a device").
+			WithOptions(choices).
+			Show()
+		pterm.Info.Println("You choose: " + choice)
 		did = deviceMap[choice]
 		conf.Cfg.Section("account").Key("MI_DID").SetValue(did)
 		err = conf.Cfg.SaveTo(conf.ConfPath)
 		if err != nil {
+			return nil, errors.New("DID not set")
+		}
+		if did == "" {
 			return nil, errors.New("DID not set")
 		}
 	}

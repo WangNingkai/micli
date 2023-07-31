@@ -3,12 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	inf "github.com/fzdwx/infinite"
-	"github.com/fzdwx/infinite/components/input/text"
-	"github.com/fzdwx/infinite/components/selection/singleselect"
-	"github.com/fzdwx/infinite/theme"
 	"github.com/gosuri/uitable"
-	"github.com/ttacon/chalk"
+	"github.com/pterm/pterm"
 	"gopkg.in/ini.v1"
 	"micli/conf"
 	"micli/miservice"
@@ -34,14 +30,14 @@ var (
 				f, err := CreatNestedFile(conf.ConfPath)
 				defer f.Close()
 				if err != nil {
-					fmt.Printf("%sFail to create config file: %v", chalk.Red, err)
+					pterm.Error.Printf("Fail to create config file: %v", err)
 					return
 				}
 				// 写入配置文件
 				_, err = f.WriteString(conf.DefaultConf)
 				if err != nil {
 
-					fmt.Printf("%sFail to write config file: %v", chalk.Red, err)
+					pterm.Error.Printf("Fail to write config file: %v", err)
 					return
 				}
 				return
@@ -49,52 +45,49 @@ var (
 
 			conf.Cfg, err = ini.Load(conf.ConfPath)
 			if err != nil {
-				fmt.Printf("%sFail to read config file: %v", chalk.Red, err)
+				pterm.Error.Printf("Fail to read config file: %v", err)
 				return
 			}
 			needSave := false
 			if conf.Cfg.Section("account").Key("MI_USER").MustString("") == "" {
 				needSave = true
-				name, _ := inf.NewText(
-					text.WithRequired(),
-					text.WithPrompt("what's your account username?"),
-					text.WithPromptStyle(theme.DefaultTheme.PromptStyle),
-					text.WithDefaultValue(""),
-				).Display()
+				name, _ := pterm.DefaultInteractiveTextInput.WithDefaultText("what's your account username?").Show()
 				conf.Cfg.Section("account").Key("MI_USER").SetValue(name)
 			}
 			if conf.Cfg.Section("account").Key("MI_PASS").MustString("") == "" {
 				needSave = true
-				pass, _ := inf.NewText(
-					text.WithRequired(),
-					text.WithPrompt("what's your password?"),
-					text.WithPromptStyle(theme.DefaultTheme.PromptStyle),
-					text.WithDefaultValue(""),
-					text.WithDisableOutputResult(),
-					text.WithEchoPassword(),
-				).Display()
+				pass, _ := pterm.DefaultInteractiveTextInput.WithDefaultText("what's your account password?").Show()
 				conf.Cfg.Section("account").Key("MI_PASS").SetValue(pass)
 			}
 			if conf.Cfg.Section("account").Key("REGION").MustString("") == "" {
 				needSave = true
-				opts := []string{"cn(中国大陆)", "de(Europe)", "us(United States)", "i2(India)", "ru(Russia)", "sg(Singapore)", "tw(中國台灣)"}
-				optValues := []string{"cn", "de", "us", "i2", "ru", "sg", "tw"}
-				region, _ := inf.NewSingleSelect(opts,
-					singleselect.WithPrompt("choose your region"),
-					singleselect.WithPromptStyle(theme.DefaultTheme.PromptStyle),
-					singleselect.WithRowRender(func(c string, h string, choice string) string {
-						return fmt.Sprintf("%s [%s] %s", c, h, choice)
-					}),
-				).Display()
-				conf.Cfg.Section("account").Key("REGION").SetValue(optValues[region])
+				opts := []string{"中国大陆", "Europe", "United States", "India", "Russia", "Singapore", "中國台灣"}
+				regionMap := map[string]string{
+					"中国大陆":          "cn",
+					"Europe":        "de",
+					"United States": "us",
+					"India":         "i2",
+					"Russia":        "ru",
+					"Singapore":     "sg",
+					"中國台灣":          "tw",
+				}
+
+				region, _ := pterm.DefaultInteractiveSelect.
+					WithOptions(opts).
+					WithDefaultText("what's your account region?").
+					Show()
+
+				conf.Cfg.Section("account").Key("REGION").SetValue(regionMap[region])
 
 			}
 			if needSave {
 				err = conf.Cfg.SaveTo(conf.ConfPath)
 				if err != nil {
-					fmt.Printf("%sFail to write config file: %v", chalk.Red, err)
+					pterm.Error.Printf("Fail to write config file: %v", err)
 					return
 				}
+				pterm.Success.Println("Config saved!Please rerun the command.")
+				return
 			}
 
 			tokenPath := fmt.Sprintf("%s/.mi.token", os.Getenv("HOME"))
@@ -125,15 +118,15 @@ var (
 			}
 
 			if err != nil {
-				fmt.Println(chalk.Red, err)
+				pterm.Error.Println(err.Error())
 			} else {
 				if resStr, ok := result.(string); ok {
-					fmt.Println(chalk.Green, resStr)
+					pterm.Println(resStr)
 				} else if table, ok := result.(*uitable.Table); ok {
-					fmt.Println(chalk.Green, table)
+					pterm.Println(table)
 				} else {
 					resBytes, _ := json.MarshalIndent(result, "", "  ")
-					fmt.Println(chalk.Green, string(resBytes))
+					pterm.Println(string(resBytes))
 				}
 			}
 		},
