@@ -2,6 +2,7 @@
 Take XiaoMi Cloud Service to the command line
 
 ## Usage
+
 ```shell
 MiCLI brings XiaoMi Cloud Service to your terminal.
 Free and open source.
@@ -29,4 +30,8 @@ Flags:
 
 Use "micli [command] --help" for more information about a command.
 ```
+
+## MIoT Spec
+
+More Detail for miot-spec [click me](https://home.miot-spec.com/)
 
