@@ -40,6 +40,7 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rotisserie/eris v0.5.4 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
+	github.com/samber/lo v1.38.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect

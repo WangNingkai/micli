@@ -1,23 +1,34 @@
 package cmd
 
 import (
+	"encoding/json"
 	"github.com/gosuri/uitable"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"micli/miservice"
+	"micli/pkg/util"
+	"os"
 	"strconv"
+	"strings"
 )
 
 var (
-	listCmd = &cobra.Command{
+	devicesPath = "devices.json"
+	reload      bool
+	listCmd     = &cobra.Command{
 		Use:   "list [name=full|name_keyword] [getVirtualModel=false|true] [getHuamiDevices=0|1]",
 		Short: "Devs List",
 		Long:  `Devs List`,
 		Run: func(cmd *cobra.Command, args []string) {
 			argLen := len(args)
 			var (
-				arg1, arg2 string
-				err        error
+				arg0, arg1, arg2 string
+				err              error
+				devices          []*miservice.DeviceInfo
 			)
+			if argLen > 0 {
+				arg0 = args[0]
+			}
 			if argLen > 1 {
 				arg1 = args[1]
 			}
@@ -32,11 +43,36 @@ var (
 			if arg2 != "" {
 				a2, _ = strconv.Atoi(arg2)
 			}
-			var devices []*miservice.DeviceInfo
-			devices, err = srv.DeviceList(a1, a2)
-			if err != nil {
-				return
+			if reload {
+				devices, err = getDeviceListFromRemote(a1, a2)
+				if err != nil {
+					handleResult(nil, err)
+					return
+				}
+				err = writeIntoLocal(devices)
+				if err != nil {
+					handleResult(nil, err)
+					return
+				}
+			} else {
+				if argLen > 1 {
+					devices, err = getDeviceListFromRemote(a1, a2)
+					if err != nil {
+						handleResult(nil, err)
+						return
+					}
+				} else {
+					devices, err = getDeviceListFromLocal()
+					if err != nil {
+						handleResult(nil, err)
+						return
+					}
+				}
 			}
+			if arg0 != "" {
+				devices = lo.Filter(devices, func(s *miservice.DeviceInfo, index int) bool { return strings.Contains(s.Name, arg0) })
+			}
+
 			table := uitable.New()
 			table.MaxColWidth = 80
 			table.Wrap = true // wrap columns
@@ -55,4 +91,50 @@ var (
 
 func init() {
 	listCmd.Example = "  list Light true 0"
+	listCmd.Flags().BoolVarP(&reload, "reload", "r", false, "reload device list")
+}
+
+func getDeviceListFromRemote(getVirtualModel bool, getHuamiDevices int) (res []*miservice.DeviceInfo, err error) {
+	res, err = srv.DeviceList(getVirtualModel, getHuamiDevices)
+	return
+}
+
+func getDeviceListFromLocal() (list []*miservice.DeviceInfo, err error) {
+	if !util.Exists(devicesPath) {
+		list, err = getDeviceListFromRemote(false, 0)
+		if err != nil {
+			return
+		}
+		err = writeIntoLocal(list)
+		if err != nil {
+			return
+		}
+		return
+	}
+	var f *os.File
+	f, err = os.Open(devicesPath)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	j := json.NewDecoder(f)
+	err = j.Decode(&list)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func writeIntoLocal(list []*miservice.DeviceInfo) (err error) {
+	var f *os.File
+	f, err = os.Create(devicesPath)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	err = json.NewEncoder(f).Encode(list)
+	if err != nil {
+		return
+	}
+	return
 }

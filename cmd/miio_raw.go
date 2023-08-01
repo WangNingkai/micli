@@ -9,8 +9,8 @@ import (
 var (
 	miioRawCmd = &cobra.Command{
 		Use:   "miio_raw /<uri> <data>",
-		Short: "Call MIIO Raw Command",
-		Long:  `Call MIIO Raw Command`,
+		Short: "Call MiIO Raw Request",
+		Long:  `Call MiIO Raw Request`,
 		Run: func(cmd *cobra.Command, args []string) {
 			var (
 				res interface{}

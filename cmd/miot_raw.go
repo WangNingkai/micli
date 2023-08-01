@@ -9,8 +9,8 @@ import (
 var (
 	miotRawCmd = &cobra.Command{
 		Use:   "miot_raw <cmd> <params>",
-		Short: "Call MIoT Raw Command",
-		Long:  `Call MIoT Raw Command`,
+		Short: "Call MIoT Raw Request",
+		Long:  `Call MIoT Raw Request`,
 		Run: func(cmd *cobra.Command, args []string) {
 			var (
 				res interface{}

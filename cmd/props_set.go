@@ -23,7 +23,7 @@ var (
 				pterm.Warning.Println("default DID not set,please set it first.")
 				deviceMap := make(map[string]string)
 				var devices []*miservice.DeviceInfo
-				devices, err = srv.DeviceList(false, 0)
+				devices, err = getDeviceListFromLocal()
 				choices := make([]string, len(devices))
 				for i, device := range devices {
 					choice := fmt.Sprintf("%s - %s", device.Name, device.Did)
@@ -39,7 +39,7 @@ var (
 			}
 			if !util.IsDigit(did) {
 				var devices []*miservice.DeviceInfo
-				devices, err = srv.DeviceList(false, 0) // Implement this method for the IOService
+				devices, err = getDeviceListFromLocal() // Implement this method for the IOService
 				if err != nil {
 					handleResult(res, err)
 					return

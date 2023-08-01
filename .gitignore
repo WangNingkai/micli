@@ -22,5 +22,9 @@
 go.work
 .idea
 conf.ini
+devices.json
+.vscode
+
+
 
 

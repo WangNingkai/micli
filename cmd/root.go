@@ -17,9 +17,12 @@ var (
 	srv       *miservice.IOService
 	did       string
 	rootCmd   = &cobra.Command{
-		Use:   "micli",
-		Short: "MiService - XiaoMi Cloud Service",
-		Long:  `XiaoMi Cloud Service for mi.com`,
+		Version: "1.0.0",
+		Use:     "micli",
+		Short:   "Take XiaoMi Cloud Service to the command line",
+		Long: `
+MiCLI brings XiaoMi Cloud Service to your terminal. 
+Free and open source.`,
 	}
 )
 
@@ -72,12 +75,12 @@ func handleResult(res interface{}, err error) {
 		pterm.Error.Println(err.Error())
 	} else {
 		if resStr, ok := res.(string); ok {
-			pterm.Info.Println(resStr)
+			pterm.Println(resStr)
 		} else if table, ok := res.(*uitable.Table); ok {
 			pterm.Println(table)
 		} else {
 			resBytes, _ := json.MarshalIndent(res, "", "  ")
-			pterm.Info.Println(string(resBytes))
+			pterm.Println(string(resBytes))
 		}
 	}
 }
