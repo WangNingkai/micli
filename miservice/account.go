@@ -49,16 +49,6 @@ type loginResp struct {
 	Callback       string      `json:"callback"`
 }
 
-func secureUrl(location, sSecurity string, nonce int64) string {
-	sNonce := fmt.Sprintf("nonce=%d&%s", nonce, sSecurity)
-	sum := sha1.Sum([]byte(sNonce))
-	clientSign := base64.StdEncoding.EncodeToString(sum[:])
-	es := url.QueryEscape(clientSign)
-	//es = strings.ReplaceAll(es, "%2F", "/")
-	requestUrl := fmt.Sprintf("%s&clientSign=%s", location, es)
-	return requestUrl
-}
-
 type DataCb func(tokens *Tokens, cookie map[string]string) url.Values
 
 func NewAccount(username, password, region string, tokenStore TokenStore) *Account {
@@ -73,45 +63,44 @@ func NewAccount(username, password, region string, tokenStore TokenStore) *Accou
 	}
 }
 
-// Login sid: service id, like "xiaomiio", "micoapi", "mina"
-func (ma *Account) Login(sid string) error {
+func (a *Account) Login(sid string) error {
 	var err error
 	defer func() {
-		if err != nil && ma.tokenStore != nil {
-			_ = ma.tokenStore.SaveToken(nil)
+		if err != nil && a.tokenStore != nil {
+			_ = a.tokenStore.SaveToken(nil)
 		}
 	}()
-	if ma.token == nil {
-		if ma.tokenStore != nil {
+	if a.token == nil {
+		if a.tokenStore != nil {
 			var tokens *Tokens
-			tokens, err = ma.tokenStore.LoadToken()
+			tokens, err = a.tokenStore.LoadToken()
 			if err == nil {
-				if tokens.UserName != ma.username {
-					_ = ma.tokenStore.SaveToken(nil)
+				if tokens.UserName != a.username {
+					_ = a.tokenStore.SaveToken(nil)
 				} else {
-					ma.token = tokens
+					a.token = tokens
 				}
 			}
 		}
 	}
-	if ma.token == nil {
-		ma.token = NewTokens()
-		ma.token.UserName = ma.username
-		ma.token.DeviceId = strings.ToUpper(util.GetRandom(16))
+	if a.token == nil {
+		a.token = NewTokens()
+		a.token.UserName = a.username
+		a.token.DeviceId = strings.ToUpper(util.GetRandom(16))
 	}
 
 	cookies := []*http.Cookie{
 		{Name: "sdkVersion", Value: "3.9"},
-		{Name: "deviceId", Value: ma.token.DeviceId},
+		{Name: "deviceId", Value: a.token.DeviceId},
 	}
 
-	if ma.token.PassToken != "" {
-		cookies = append(cookies, &http.Cookie{Name: "userId", Value: ma.token.UserId})
-		cookies = append(cookies, &http.Cookie{Name: "passToken", Value: ma.token.PassToken})
+	if a.token.PassToken != "" {
+		cookies = append(cookies, &http.Cookie{Name: "userId", Value: a.token.UserId})
+		cookies = append(cookies, &http.Cookie{Name: "passToken", Value: a.token.PassToken})
 	}
 
 	var resp *loginResp
-	resp, err = ma.serviceLogin(fmt.Sprintf("serviceLogin?sid=%s&_json=true", sid), nil, cookies)
+	resp, err = a.serviceLogin(fmt.Sprintf("serviceLogin?sid=%s&_json=true", sid), nil, cookies)
 	if err != nil {
 		return err
 	}
@@ -123,10 +112,10 @@ func (ma *Account) Login(sid string) error {
 			"sid":      {resp.Sid},
 			"_sign":    {resp.Sign},
 			"callback": {resp.Callback},
-			"user":     {ma.username},
-			"hash":     {strings.ToUpper(fmt.Sprintf("%x", md5.Sum([]byte(ma.password))))},
+			"user":     {a.username},
+			"hash":     {strings.ToUpper(fmt.Sprintf("%x", md5.Sum([]byte(a.password))))},
 		}
-		resp, err = ma.serviceLogin("serviceLoginAuth2", data, cookies)
+		resp, err = a.serviceLogin("serviceLoginAuth2", data, cookies)
 		if err != nil {
 			//log.Println("serviceLoginAuth2 error", err)
 			return err
@@ -135,30 +124,30 @@ func (ma *Account) Login(sid string) error {
 			return fmt.Errorf("code Error: %v", resp)
 		}
 	}
-	ma.token.UserId = fmt.Sprint(resp.UserID)
-	ma.token.PassToken = resp.PassToken
+	a.token.UserId = fmt.Sprint(resp.UserID)
+	a.token.PassToken = resp.PassToken
 
 	var serviceToken string
-	serviceToken, err = ma.securityTokenService(resp.Location, resp.Ssecurity, resp.Nonce)
+	serviceToken, err = a.securityTokenService(resp.Location, resp.Ssecurity, resp.Nonce)
 	if err != nil {
 		//log.Println("securityTokenService error", err)
 		return err
 	}
-	ma.token.Sids[sid] = SidToken{
+	a.token.Sids[sid] = SidToken{
 		Ssecurity:    resp.Ssecurity,
 		ServiceToken: serviceToken,
 	}
 
-	if ma.tokenStore != nil {
-		_ = ma.tokenStore.SaveToken(ma.token)
+	if a.tokenStore != nil {
+		_ = a.tokenStore.SaveToken(a.token)
 	}
 
 	return nil
 }
 
-func (ma *Account) serviceLogin(uri string, data url.Values, cookies []*http.Cookie) (*loginResp, error) {
+func (a *Account) serviceLogin(uri string, data url.Values, cookies []*http.Cookie) (*loginResp, error) {
 	headers := http.Header{
-		"User-Agent": []string{UA},
+		"User-Agent": []string{"APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS"},
 	}
 	var reqBody io.Reader
 	method := http.MethodGet
@@ -174,7 +163,7 @@ func (ma *Account) serviceLogin(uri string, data url.Values, cookies []*http.Coo
 		req.AddCookie(cookie)
 	}
 	//log.Println("service login", req.URL.String())
-	resp, err := ma.client.Do(req)
+	resp, err := a.client.Do(req)
 	if err != nil {
 		//log.Println("http do request error", err)
 		return nil, err
@@ -197,16 +186,26 @@ func (ma *Account) serviceLogin(uri string, data url.Values, cookies []*http.Coo
 	return &jsonResponse, nil
 }
 
-func (ma *Account) securityTokenService(location, sSecurity string, nonce int64) (string, error) {
-	requestUrl := secureUrl(location, sSecurity, nonce)
+func (a *Account) secureUrl(location, sSecurity string, nonce int64) string {
+	sNonce := fmt.Sprintf("nonce=%d&%s", nonce, sSecurity)
+	sum := sha1.Sum([]byte(sNonce))
+	clientSign := base64.StdEncoding.EncodeToString(sum[:])
+	es := url.QueryEscape(clientSign)
+	//es = strings.ReplaceAll(es, "%2F", "/")
+	requestUrl := fmt.Sprintf("%s&clientSign=%s", location, es)
+	return requestUrl
+}
+
+func (a *Account) securityTokenService(location, sSecurity string, nonce int64) (string, error) {
+	requestUrl := a.secureUrl(location, sSecurity, nonce)
 	//log.Println("securityTokenService", requestUrl)
 	req, _ := http.NewRequest(http.MethodGet, requestUrl, nil)
 	headers := http.Header{
-		"User-Agent": []string{UA},
+		"User-Agent": []string{"APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS"},
 	}
 	req.Header = headers
 
-	resp, err := ma.client.Do(req)
+	resp, err := a.client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -230,20 +229,20 @@ func (ma *Account) securityTokenService(location, sSecurity string, nonce int64)
 	return serviceToken, nil
 }
 
-func (ma *Account) NewRequest(sid, u string, data url.Values, cb DataCb, headers http.Header) *http.Request {
+func (a *Account) NewRequest(sid, u string, data url.Values, cb DataCb, headers http.Header) *http.Request {
 	var req *http.Request
 	var body io.Reader
 	cookies := []*http.Cookie{
-		{Name: "userId", Value: ma.token.UserId},
-		{Name: "serviceToken", Value: ma.token.Sids[sid].ServiceToken},
+		{Name: "userId", Value: a.token.UserId},
+		{Name: "serviceToken", Value: a.token.Sids[sid].ServiceToken},
 	}
-	//fmt.Println("tokens", ma.token)
+	//fmt.Println("tokens", a.token)
 	method := http.MethodGet
 	if data != nil || cb != nil {
 		var values url.Values
 		if cb != nil {
 			var cookieMap = make(map[string]string)
-			values = cb(ma.token, cookieMap)
+			values = cb(a.token, cookieMap)
 			for k, v := range cookieMap {
 				cookies = append(cookies, &http.Cookie{Name: k, Value: v})
 			}
@@ -269,24 +268,24 @@ func (ma *Account) NewRequest(sid, u string, data url.Values, cb DataCb, headers
 	return req
 }
 
-func (ma *Account) hasSid(sid string) bool {
-	if ma.token == nil {
+func (a *Account) hasSid(sid string) bool {
+	if a.token == nil {
 		return false
 	}
-	_, ok := ma.token.Sids[sid]
+	_, ok := a.token.Sids[sid]
 	return ok
 }
 
-func (ma *Account) Request(sid, u string, data url.Values, cb DataCb, headers http.Header, reLogin bool, output any) error {
-	if !ma.hasSid(sid) {
-		err := ma.Login(sid)
+func (a *Account) Request(sid, u string, data url.Values, cb DataCb, headers http.Header, reLogin bool, output any) error {
+	if !a.hasSid(sid) {
+		err := a.Login(sid)
 		if err != nil {
 			return err
 		}
 	}
 	//log.Println("request token done")
-	req := ma.NewRequest(sid, u, data, cb, headers)
-	resp, err := ma.client.Do(req)
+	req := a.NewRequest(sid, u, data, cb, headers)
+	resp, err := a.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -317,11 +316,11 @@ func (ma *Account) Request(sid, u string, data url.Values, cb DataCb, headers ht
 		}
 	}
 	if resp.StatusCode == http.StatusUnauthorized && reLogin {
-		ma.token = nil
-		if ma.tokenStore != nil {
-			_ = ma.tokenStore.SaveToken(nil)
+		a.token = nil
+		if a.tokenStore != nil {
+			_ = a.tokenStore.SaveToken(nil)
 		}
-		return ma.Request(sid, u, data, cb, headers, false, output)
+		return a.Request(sid, u, data, cb, headers, false, output)
 	}
 	body, _ := io.ReadAll(resp.Body)
 	return fmt.Errorf("error %s: %s", u, string(body))
