@@ -4,9 +4,9 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"io"
 	"micli/pkg/util"
 	"net/http"
@@ -14,6 +14,8 @@ import (
 	"net/url"
 	"strings"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type Account struct {
 	client     *http.Client

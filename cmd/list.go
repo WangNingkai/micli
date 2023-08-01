@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"github.com/gosuri/uitable"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"

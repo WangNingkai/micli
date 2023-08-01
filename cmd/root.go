@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gosuri/uitable"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"gopkg.in/ini.v1"
@@ -11,6 +11,8 @@ import (
 	"micli/miservice"
 	"os"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 var (
 	miAccount *miservice.Account

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"github.com/spf13/cobra"
 	"micli/pkg/util"
 )

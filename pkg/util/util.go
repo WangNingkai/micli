@@ -8,8 +8,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"io"
 	mathRand "math/rand"
 	"net/url"
@@ -20,6 +20,8 @@ import (
 	"time"
 	"unicode"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Exists reports whether the named file or directory exists.
 func Exists(name string) bool {
@@ -162,6 +164,6 @@ func IsDigit(s string) bool {
 }
 
 func IsJSON(str string) bool {
-	var js json.RawMessage
+	var js interface{}
 	return json.Unmarshal([]byte(str), &js) == nil
 }
