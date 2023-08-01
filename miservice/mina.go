@@ -7,6 +7,21 @@ import (
 	"net/url"
 )
 
+// DEVICES: http://miot-spec.org/miot-spec-v2/instances?status=all
+// device types: http://miot-spec.org/miot-spec-v2/spec/devices
+// service types: http://miot-spec.org/miot-spec-v2/spec/services
+
+// Miot subcommand response codes
+// | 0 | Success |
+// | 1 | Request received, but the operation has not been completed yet |
+// | -4001 | Unreadable attribute |
+// | -4002 | Attribute is not writable |
+// | -4003 | Properties, methods, events do not exist |
+// | -4004 | Other internal errors |
+// | -4005 | Attribute value error |
+// | -4006 | Method in parameter error |
+// | -4007 | did error
+
 type MinaService struct {
 	account *Account
 }

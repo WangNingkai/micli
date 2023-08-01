@@ -98,10 +98,12 @@ func (io *IOService) Request(uri string, args map[string]interface{}) (interface
 	return result, nil
 }
 
-func (io *IOService) DeviceList(getVirtualModel bool, getHuamiDevices int) (devices []*DeviceInfo, err error) {
+func (io *IOService) DeviceList() (devices []*DeviceInfo, err error) {
 	data := map[string]interface{}{
-		"getVirtualModel": getVirtualModel,
-		"getHuamiDevices": getHuamiDevices,
+		"getVirtualModel":    true,
+		"getHuamiDevices":    1,
+		"get_split_device":   false,
+		"support_smart_home": true,
 	}
 	var result interface{}
 	result, err = io.Request("/home/device_list", data)
