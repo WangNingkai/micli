@@ -1,4 +1,4 @@
-# MiCli
+# MiCLI
 Take XiaoMi Cloud Service to the command line
 
 ## Usage
