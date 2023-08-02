@@ -63,6 +63,7 @@ func NewAccount(username, password, region string, tokenStore TokenStore) *Accou
 	}
 }
 
+// Login 米家服务登录
 func (a *Account) Login(sid string) error {
 	var err error
 	defer func() {
@@ -145,137 +146,7 @@ func (a *Account) Login(sid string) error {
 	return nil
 }
 
-func (a *Account) serviceLogin(uri string, data url.Values, cookies []*http.Cookie) (*loginResp, error) {
-	headers := http.Header{
-		"User-Agent": []string{"APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS"},
-	}
-	var reqBody io.Reader
-	method := http.MethodGet
-	if data != nil {
-		reqBody = strings.NewReader(data.Encode())
-		method = http.MethodPost
-		headers.Set("Content-Type", "application/x-www-form-urlencoded")
-	}
-	req, _ := http.NewRequest(method, fmt.Sprintf("https://account.xiaomi.com/pass/%s", uri), reqBody)
-	req.Header = headers
-
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
-	}
-	//log.Println("service login", req.URL.String())
-	resp, err := a.client.Do(req)
-	if err != nil {
-		//log.Println("http do request error", err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-	//log.Println("service login return", resp.StatusCode)
-	var body []byte
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	//log.Println("body", string(body))
-	var jsonResponse loginResp
-	err = json.Unmarshal(body[11:], &jsonResponse)
-	if err != nil {
-		//log.Println("json unmarshal error", err, string(body))
-		return nil, err
-	}
-	//log.Println("service login success", jsonResponse)
-	return &jsonResponse, nil
-}
-
-func (a *Account) secureUrl(location, sSecurity string, nonce int64) string {
-	sNonce := fmt.Sprintf("nonce=%d&%s", nonce, sSecurity)
-	sum := sha1.Sum([]byte(sNonce))
-	clientSign := base64.StdEncoding.EncodeToString(sum[:])
-	es := url.QueryEscape(clientSign)
-	//es = strings.ReplaceAll(es, "%2F", "/")
-	requestUrl := fmt.Sprintf("%s&clientSign=%s", location, es)
-	return requestUrl
-}
-
-func (a *Account) securityTokenService(location, sSecurity string, nonce int64) (string, error) {
-	requestUrl := a.secureUrl(location, sSecurity, nonce)
-	//log.Println("securityTokenService", requestUrl)
-	req, _ := http.NewRequest(http.MethodGet, requestUrl, nil)
-	headers := http.Header{
-		"User-Agent": []string{"APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS"},
-	}
-	req.Header = headers
-
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	cookies := resp.Cookies()
-	var serviceToken string
-
-	for _, cookie := range cookies {
-		if cookie.Name == "serviceToken" {
-			serviceToken = cookie.Value
-			break
-		}
-	}
-
-	if serviceToken == "" {
-		body, _ := io.ReadAll(resp.Body)
-		return "", errors.New(string(body))
-	}
-
-	return serviceToken, nil
-}
-
-func (a *Account) NewRequest(sid, u string, data url.Values, cb DataCb, headers http.Header) *http.Request {
-	var req *http.Request
-	var body io.Reader
-	cookies := []*http.Cookie{
-		{Name: "userId", Value: a.token.UserId},
-		{Name: "serviceToken", Value: a.token.Sids[sid].ServiceToken},
-	}
-	//fmt.Println("tokens", a.token)
-	method := http.MethodGet
-	if data != nil || cb != nil {
-		var values url.Values
-		if cb != nil {
-			var cookieMap = make(map[string]string)
-			values = cb(a.token, cookieMap)
-			for k, v := range cookieMap {
-				cookies = append(cookies, &http.Cookie{Name: k, Value: v})
-			}
-		} else if data != nil {
-			values = data
-		}
-		if values != nil {
-			method = http.MethodPost
-			body = strings.NewReader(values.Encode())
-			headers.Set("Content-Type", "application/x-www-form-urlencoded")
-		}
-	}
-	req, _ = http.NewRequest(method, u, body)
-	if headers != nil {
-		req.Header = headers
-	}
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
-	}
-	/*for k, v := range cookies {
-		log.Println("request cookie", k, v)
-	}*/
-	return req
-}
-
-func (a *Account) hasSid(sid string) bool {
-	if a.token == nil {
-		return false
-	}
-	_, ok := a.token.Sids[sid]
-	return ok
-}
-
+// Request 请求
 func (a *Account) Request(sid, u string, data url.Values, cb DataCb, headers http.Header, reLogin bool, output any) error {
 	if !a.hasSid(sid) {
 		err := a.Login(sid)
@@ -324,4 +195,140 @@ func (a *Account) Request(sid, u string, data url.Values, cb DataCb, headers htt
 	}
 	body, _ := io.ReadAll(resp.Body)
 	return fmt.Errorf("error %s: %s", u, string(body))
+}
+
+// NewRequest 构造请求
+func (a *Account) NewRequest(sid, u string, data url.Values, cb DataCb, headers http.Header) *http.Request {
+	var req *http.Request
+	var body io.Reader
+	cookies := []*http.Cookie{
+		{Name: "userId", Value: a.token.UserId},
+		{Name: "serviceToken", Value: a.token.Sids[sid].ServiceToken},
+	}
+	//fmt.Println("tokens", a.token)
+	method := http.MethodGet
+	if data != nil || cb != nil {
+		var values url.Values
+		if cb != nil {
+			var cookieMap = make(map[string]string)
+			values = cb(a.token, cookieMap)
+			for k, v := range cookieMap {
+				cookies = append(cookies, &http.Cookie{Name: k, Value: v})
+			}
+		} else if data != nil {
+			values = data
+		}
+		if values != nil {
+			method = http.MethodPost
+			body = strings.NewReader(values.Encode())
+			headers.Set("Content-Type", "application/x-www-form-urlencoded")
+		}
+	}
+	req, _ = http.NewRequest(method, u, body)
+	if headers != nil {
+		req.Header = headers
+	}
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+	/*for k, v := range cookies {
+		log.Println("request cookie", k, v)
+	}*/
+	return req
+}
+
+// serviceLogin 服务登录
+func (a *Account) serviceLogin(uri string, data url.Values, cookies []*http.Cookie) (*loginResp, error) {
+	headers := http.Header{
+		"User-Agent": []string{"APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS"},
+	}
+	var reqBody io.Reader
+	method := http.MethodGet
+	if data != nil {
+		reqBody = strings.NewReader(data.Encode())
+		method = http.MethodPost
+		headers.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	req, _ := http.NewRequest(method, fmt.Sprintf("https://account.xiaomi.com/pass/%s", uri), reqBody)
+	req.Header = headers
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+	//log.Println("service login", req.URL.String())
+	resp, err := a.client.Do(req)
+	if err != nil {
+		//log.Println("http do request error", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	//log.Println("service login return", resp.StatusCode)
+	var body []byte
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	//log.Println("body", string(body))
+	var jsonResponse loginResp
+	err = json.Unmarshal(body[11:], &jsonResponse)
+	if err != nil {
+		//log.Println("json unmarshal error", err, string(body))
+		return nil, err
+	}
+	//log.Println("service login success", jsonResponse)
+	return &jsonResponse, nil
+}
+
+// secureUrl 生成安全链接
+func (a *Account) secureUrl(location, sSecurity string, nonce int64) string {
+	sNonce := fmt.Sprintf("nonce=%d&%s", nonce, sSecurity)
+	sum := sha1.Sum([]byte(sNonce))
+	clientSign := base64.StdEncoding.EncodeToString(sum[:])
+	es := url.QueryEscape(clientSign)
+	//es = strings.ReplaceAll(es, "%2F", "/")
+	requestUrl := fmt.Sprintf("%s&clientSign=%s", location, es)
+	return requestUrl
+}
+
+// securityTokenService 获取安全令牌
+func (a *Account) securityTokenService(location, sSecurity string, nonce int64) (string, error) {
+	requestUrl := a.secureUrl(location, sSecurity, nonce)
+	//log.Println("securityTokenService", requestUrl)
+	req, _ := http.NewRequest(http.MethodGet, requestUrl, nil)
+	headers := http.Header{
+		"User-Agent": []string{"APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS"},
+	}
+	req.Header = headers
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	cookies := resp.Cookies()
+	var serviceToken string
+
+	for _, cookie := range cookies {
+		if cookie.Name == "serviceToken" {
+			serviceToken = cookie.Value
+			break
+		}
+	}
+
+	if serviceToken == "" {
+		body, _ := io.ReadAll(resp.Body)
+		return "", errors.New(string(body))
+	}
+
+	return serviceToken, nil
+}
+
+// hasSid 判断是否有sid
+func (a *Account) hasSid(sid string) bool {
+	if a.token == nil {
+		return false
+	}
+	_, ok := a.token.Sids[sid]
+	return ok
 }
