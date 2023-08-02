@@ -41,7 +41,7 @@ var (
 					WithDefaultText("Please select a device").
 					WithOptions(choices).
 					Show()
-				pterm.Info.Println("You choose: " + choice)
+				pterm.Info.Println("Choose Device: " + choice)
 				keyword = deviceMap[choice]
 			}
 			var data *miservice.MiotSpecInstancesData
