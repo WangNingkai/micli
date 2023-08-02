@@ -39,32 +39,38 @@ type MiotSpecInstances struct {
 }
 
 type MiotSpecInstancesData struct {
-	Type        string `json:"type"`
-	Description string `json:"description"`
-	Services    []struct {
-		Iid         int    `json:"iid"`
-		Type        string `json:"type"`
+	Type        string             `json:"type"`
+	Description string             `json:"description"`
+	Services    []*MiotSpecService `json:"services"`
+}
+
+type MiotSpecService struct {
+	Iid         int                 `json:"iid"`
+	Type        string              `json:"type"`
+	Description string              `json:"description"`
+	Properties  []*MiotSpecProperty `json:"properties,omitempty"`
+	Actions     []*MiotSpecAction   `json:"actions,omitempty"`
+}
+
+type MiotSpecProperty struct {
+	Iid         int      `json:"iid"`
+	Type        string   `json:"type"`
+	Description string   `json:"description"`
+	Format      string   `json:"format"`
+	Access      []string `json:"access"`
+	ValueList   []struct {
+		Value       int    `json:"value"`
 		Description string `json:"description"`
-		Properties  []struct {
-			Iid         int      `json:"iid"`
-			Type        string   `json:"type"`
-			Description string   `json:"description"`
-			Format      string   `json:"format"`
-			Access      []string `json:"access"`
-			ValueList   []struct {
-				Value       int    `json:"value"`
-				Description string `json:"description"`
-			} `json:"value-list,omitempty"`
-			ValueRange []int `json:"value-range,omitempty"`
-		} `json:"properties,omitempty"`
-		Actions []struct {
-			Iid         int           `json:"iid"`
-			Type        string        `json:"type"`
-			Description string        `json:"description"`
-			In          []interface{} `json:"in"`
-			Out         []interface{} `json:"out"`
-		} `json:"actions,omitempty"`
-	} `json:"services"`
+	} `json:"value-list,omitempty"`
+	ValueRange []interface{} `json:"value-range,omitempty"`
+}
+
+type MiotSpecAction struct {
+	Iid         int           `json:"iid"`
+	Type        string        `json:"type"`
+	Description string        `json:"description"`
+	In          []float64     `json:"in"`
+	Out         []interface{} `json:"out"`
 }
 
 func NewIOService(account *Account) *IOService {
@@ -279,6 +285,7 @@ func (io *IOService) MiotSpec(keyword string) (data *MiotSpecInstancesData, err 
 				defer f.Close()
 				_ = json.NewEncoder(f).Encode(specs)
 			}
+			return
 		}
 		specs = io.getSpec(keyword, specs)
 		if len(specs) != 1 {
@@ -295,7 +302,8 @@ func (io *IOService) MiotSpec(keyword string) (data *MiotSpecInstancesData, err 
 		}
 	}
 	u := fmt.Sprintf("https://miot-spec.org/miot-spec-v2/instance?type=%s", keyword)
-	rs, err := io.account.client.Get(u)
+	var rs *http.Response
+	rs, err = io.account.client.Get(u)
 	if err != nil {
 		return
 	}
