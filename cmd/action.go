@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"micli/miservice"
 	"micli/pkg/util"
@@ -20,21 +19,10 @@ var (
 				err error
 			)
 			if did == "" {
-				deviceMap := make(map[string]string)
-				var devices []*miservice.DeviceInfo
-				devices, err = getDeviceListFromLocal()
-				choices := make([]string, len(devices))
-				for i, device := range devices {
-					choice := fmt.Sprintf("%s - %s", device.Name, device.Did)
-					deviceMap[choice] = device.Did
-					choices[i] = choice
+				did, err = chooseDevice()
+				if err != nil {
+					return
 				}
-				choice, _ := pterm.DefaultInteractiveSelect.
-					WithDefaultText("Please select a device").
-					WithOptions(choices).
-					Show()
-				pterm.Info.Println("You choose: " + choice)
-				did = deviceMap[choice]
 			}
 			if !util.IsDigit(did) {
 				var devices []*miservice.DeviceInfo

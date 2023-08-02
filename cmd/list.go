@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/gosuri/uitable"
+	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"micli/miservice"
@@ -113,5 +115,27 @@ func writeIntoLocal(list []*miservice.DeviceInfo) (err error) {
 	if err != nil {
 		return
 	}
+	return
+}
+
+func chooseDevice() (did string, err error) {
+	deviceMap := make(map[string]string)
+	var devices []*miservice.DeviceInfo
+	devices, err = getDeviceListFromLocal()
+	if err != nil {
+		return
+	}
+	choices := make([]string, len(devices))
+	for i, device := range devices {
+		choice := fmt.Sprintf("%s - %s", device.Name, device.Did)
+		deviceMap[choice] = device.Did
+		choices[i] = choice
+	}
+	choice, _ := pterm.DefaultInteractiveSelect.
+		WithDefaultText("Please select a device").
+		WithOptions(choices).
+		Show()
+	pterm.Info.Println("You choose: " + choice)
+	did = deviceMap[choice]
 	return
 }

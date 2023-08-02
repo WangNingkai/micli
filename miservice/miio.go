@@ -159,7 +159,7 @@ func (io *IOService) HomeSetProps(did string, props map[string]interface{}) (map
 }
 
 func (io *IOService) HomeSetProp(did, prop string, value interface{}) (int, error) {
-	result, err := io.HomeRequest(did, "set_"+prop, value)
+	result, err := io.HomeRequest(did, fmt.Sprintf("set_%s", prop), value)
 	if err != nil {
 		return 0, err
 	}
