@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
 	"micli/conf"
@@ -69,11 +70,12 @@ var (
 			if miot {
 				res, err = srv.MiotSetProps(did, props)
 			} else {
-				var _props map[string]interface{}
+				/*var _props map[string]interface{}
 				for _, prop := range props {
 					_props[prop[0].(string)] = prop[1]
 				}
-				res, err = srv.HomeSetProps(did, _props)
+				res, err = srv.HomeSetProps(did, _props)*/
+				err = errors.New("device not support miot")
 			}
 
 			handleResult(res, err)

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
@@ -92,11 +93,12 @@ var (
 			if miot {
 				res, err = srv.MiotGetProps(did, props)
 			} else {
-				var _props []string
+				/*var _props []string
 				for _, prop := range props {
 					_props = append(_props, prop[0].(string))
 				}
-				res, err = srv.HomeGetProps(did, _props)
+				res, err = srv.HomeGetProps(did, _props)*/
+				err = errors.New("device not support miot")
 			}
 			handleResult(res, err)
 		},
