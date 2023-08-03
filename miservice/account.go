@@ -171,7 +171,7 @@ func (a *Account) Request(sid, u string, data url.Values, cb DataCb, headers htt
 		if err != nil {
 			return err
 		}
-		//log.Println("response", u, string(rs))
+		//pterm.Println("response", u, string(rs))
 		var result *_result
 		err = json.Unmarshal(rs, &result)
 		if err != nil {
@@ -204,8 +204,10 @@ func (a *Account) NewRequest(sid, u string, data url.Values, cb DataCb, headers 
 	cookies := []*http.Cookie{
 		{Name: "userId", Value: a.token.UserId},
 		{Name: "serviceToken", Value: a.token.Sids[sid].ServiceToken},
+		{Name: "yetAnotherServiceToken", Value: a.token.Sids[sid].ServiceToken},
+		{Name: "channel", Value: "MI_APP_STORE"},
 	}
-	//fmt.Println("tokens", a.token)
+	//pterm.Println("tokens", a.token)
 	method := http.MethodGet
 	if data != nil || cb != nil {
 		var values url.Values
@@ -220,6 +222,7 @@ func (a *Account) NewRequest(sid, u string, data url.Values, cb DataCb, headers 
 		}
 		if values != nil {
 			method = http.MethodPost
+			//pterm.Println(values)
 			body = strings.NewReader(values.Encode())
 			headers.Set("Content-Type", "application/x-www-form-urlencoded")
 		}
@@ -232,7 +235,7 @@ func (a *Account) NewRequest(sid, u string, data url.Values, cb DataCb, headers 
 		req.AddCookie(cookie)
 	}
 	/*for k, v := range cookies {
-		log.Println("request cookie", k, v)
+		pterm.Println("request cookie", k, v)
 	}*/
 	return req
 }
