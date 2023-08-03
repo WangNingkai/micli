@@ -142,3 +142,19 @@ func Complete() (err error) {
 	}
 	return
 }
+
+func SetDefaultDid(did string) (err error) {
+	Cfg.Section("account").Key("MI_DID").SetValue(did)
+	err = Cfg.SaveTo(ConfPath)
+	if err != nil {
+		pterm.Error.Printf("Fail to write config file: %v", err)
+		return
+	}
+	pterm.Success.Println("Config saved! Please rerun the command.")
+	err = Cfg.Reload()
+	if err != nil {
+		pterm.Error.Printf("Fail to reload config file: %v", err)
+		return
+	}
+	return
+}

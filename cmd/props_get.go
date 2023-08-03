@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
+	"micli/conf"
 	"micli/miservice"
 	"micli/pkg/util"
 	"strconv"
@@ -16,17 +18,21 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 
 			var (
-				res interface{}
-				err error
+				res     interface{}
+				err     error
+				d_model string
 			)
 			if did == "" {
-				did, err = chooseDevice()
-				if err != nil {
-					return
+				did = conf.Cfg.Section("account").Key("MI_DID").MustString("")
+				if did == "" {
+					did, err = chooseDevice()
+					if err != nil {
+						return
+					}
 				}
 			}
+			var devices []*miservice.DeviceInfo
 			if !util.IsDigit(did) {
-				var devices []*miservice.DeviceInfo
 				devices, err = getDeviceListFromLocal() // Implement this method for the IOService
 				if err != nil {
 					handleResult(res, err)
@@ -40,10 +46,33 @@ var (
 				for _, device := range devices {
 					if device.Name == did {
 						did = device.Did
+						d_model = device.Model
 						break
 					}
 				}
+			} else {
+				devices, err = getDeviceListFromLocal() // Implement this method for the IOService
+				if err != nil {
+					handleResult(res, err)
+					return
+				}
+				device, _ := lo.Find(devices, func(d *miservice.DeviceInfo) bool { return d.Did == did })
+				if device != nil {
+					d_model = device.Model
+				}
 			}
+			var specs *miservice.MiotSpecInstancesData
+			specs, err = srv.MiotSpec(d_model)
+			if err != nil {
+				handleResult(nil, err)
+				return
+			}
+			if len(specs.Services) == 0 {
+				err = fmt.Errorf("no service found")
+				handleResult(res, err)
+				return
+			}
+
 			miot := true
 			var props [][]interface{}
 			for _, item := range args {

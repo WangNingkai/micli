@@ -4,6 +4,7 @@ import (
 	"crypto/rc4"
 	"encoding/base64"
 	"fmt"
+	"github.com/pterm/pterm"
 	"micli/pkg/util"
 	"net/http"
 	"net/url"
@@ -189,6 +190,7 @@ func (io *IOService) MiotGetProps(did string, props [][]interface{}) ([]interfac
 		}
 	}
 	result, err := io.MiotRequest("prop/get", params)
+	pterm.Print(result)
 	if err != nil {
 		return nil, err
 	}

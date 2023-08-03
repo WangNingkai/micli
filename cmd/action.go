@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"micli/conf"
 	"micli/miservice"
 	"micli/pkg/util"
 	"strconv"
@@ -19,9 +20,12 @@ var (
 				err error
 			)
 			if did == "" {
-				did, err = chooseDevice()
-				if err != nil {
-					return
+				did = conf.Cfg.Section("account").Key("MI_DID").MustString("")
+				if did == "" {
+					did, err = chooseDevice()
+					if err != nil {
+						return
+					}
 				}
 			}
 			if !util.IsDigit(did) {
