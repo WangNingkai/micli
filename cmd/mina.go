@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"github.com/gosuri/uitable"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
@@ -63,19 +62,38 @@ func list(srv *miservice.MinaService, keyword string) (res interface{}, err erro
 	if keyword != "" {
 		devices = lo.Filter(devices, func(s *miservice.DeviceData, index int) bool { return strings.Contains(s.Name, keyword) })
 	}
-	table := uitable.New()
-	table.MaxColWidth = 80
-	table.Wrap = true // wrap columns
+	var items []pterm.BulletListItem
 	for i, device := range devices {
-		table.AddRow("")
-		table.AddRow("Index:", i+1)
-		table.AddRow("Name:", device.Name)
-		table.AddRow("DeviceID:", device.DeviceID)
-		table.AddRow("Presence:", device.Presence)
-		table.AddRow("MiotDID:", device.MiotDID)
-		table.AddRow("")
+		items = append(items, pterm.BulletListItem{
+			Level:     0,
+			TextStyle: pterm.NewStyle(pterm.FgGreen),
+			Text:      device.Name,
+		})
+		items = append(items, pterm.BulletListItem{
+			Level:  1,
+			Text:   fmt.Sprintf("Index: %d", i+1),
+			Bullet: ">",
+		})
+		items = append(items, pterm.BulletListItem{
+			Level:  1,
+			Text:   fmt.Sprintf("DeviceID: %s", device.DeviceID),
+			Bullet: ">",
+		})
+		items = append(items, pterm.BulletListItem{
+			Level:  1,
+			Text:   fmt.Sprintf("Presence: %s", device.Presence),
+			Bullet: ">",
+		})
+		items = append(items, pterm.BulletListItem{
+			Level:  1,
+			Text:   fmt.Sprintf("MiotDID: %s", device.MiotDID),
+			Bullet: ">",
+		})
 	}
-	res = table
+	err = pterm.DefaultBulletList.WithItems(items).Render()
+	if err != nil {
+		pterm.Error.Println(err)
+	}
 	return
 }
 

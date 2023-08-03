@@ -60,41 +60,40 @@ var (
 				var leveledList pterm.LeveledList
 				for _, service := range data.Services {
 					piids := make(map[interface{}]string, len(service.Properties))
-					leveledList = append(leveledList, pterm.LeveledListItem{Level: 0, Text: fmt.Sprintf("%s (siid:%d)", service.Description, service.Iid)})
+					leveledList = append(leveledList, pterm.LeveledListItem{Level: 0, Text: fmt.Sprintf("%s (siid:%d)", pterm.Cyan(service.Description), service.Iid)})
 					if len(service.Properties) > 0 {
-						leveledList = append(leveledList, pterm.LeveledListItem{Level: 1, Text: "Properties"})
+						leveledList = append(leveledList, pterm.LeveledListItem{Level: 1, Text: pterm.Magenta("Properties")})
 						for _, property := range service.Properties {
 							if property.Description == "" {
 								types := strings.Split(property.Type, ":")
-								pterm.Info.Println(types)
 								if len(types) > 3 {
 									property.Description = strings.Title(strings.ReplaceAll(types[3], "-", " "))
 								}
 							}
 							piids[property.Iid] = property.Description
-							detail := fmt.Sprintf("%s (piid:%d,format:%s,access:[%s])", property.Description, property.Iid, property.Format, strings.Join(property.Access, ","))
+							detail := fmt.Sprintf("%s (piid:%d,format:%s,access:[%s])", pterm.Green(property.Description), property.Iid, property.Format, strings.Join(property.Access, ","))
 							leveledList = append(leveledList, pterm.LeveledListItem{Level: 2, Text: detail})
 							if property.ValueRange != nil {
 								min := property.ValueRange[0]
 								max := property.ValueRange[1]
 								step := property.ValueRange[2]
 								rangeData := fmt.Sprintf("range:[%v,%v],step:%v", min, max, step)
-								leveledList = append(leveledList, pterm.LeveledListItem{Level: 3, Text: rangeData})
+								leveledList = append(leveledList, pterm.LeveledListItem{Level: 3, Text: pterm.LightYellow(rangeData)})
 							}
 							if property.ValueList != nil {
 								for _, value := range property.ValueList {
-									leveledList = append(leveledList, pterm.LeveledListItem{Level: 3, Text: fmt.Sprintf("%d-%s", value.Value, value.Description)})
+									leveledList = append(leveledList, pterm.LeveledListItem{Level: 3, Text: pterm.NewStyle(pterm.FgLightYellow).Sprintf("%d-%s", value.Value, value.Description)})
 								}
 							}
 						}
 						if service.Actions != nil {
-							leveledList = append(leveledList, pterm.LeveledListItem{Level: 1, Text: "Actions"})
+							leveledList = append(leveledList, pterm.LeveledListItem{Level: 1, Text: pterm.Magenta("Actions")})
 							for _, action := range service.Actions {
-								leveledList = append(leveledList, pterm.LeveledListItem{Level: 2, Text: fmt.Sprintf("%s (aiid:%d)", action.Description, action.Iid)})
+								leveledList = append(leveledList, pterm.LeveledListItem{Level: 2, Text: fmt.Sprintf("%s (aiid:%d)", pterm.Green(action.Description), action.Iid)})
 								if action.In != nil {
 									for _, in := range action.In {
 										p, _ := lo.Find(service.Properties, func(property *miservice.MiotSpecProperty) bool { return property.Iid == int(in) })
-										leveledList = append(leveledList, pterm.LeveledListItem{Level: 3, Text: fmt.Sprintf("%v-%v", in, p.Description)})
+										leveledList = append(leveledList, pterm.LeveledListItem{Level: 3, Text: pterm.NewStyle(pterm.FgLightYellow).Sprintf("%v-%v", in, p.Description)})
 									}
 								}
 							}
@@ -102,7 +101,8 @@ var (
 					}
 				}
 				root := putils.TreeFromLeveledList(leveledList)
-				root.Text = fmt.Sprintf("Miot Spec [%s]", data.Description)
+				root.Text = pterm.NewStyle().Sprintf("Miot Spec [%s]", data.Description)
+
 				err = pterm.DefaultTree.WithRoot(root).Render()
 				if err != nil {
 					handleResult(nil, err)

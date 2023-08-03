@@ -76,6 +76,9 @@ func handleResult(res interface{}, err error) {
 	if err != nil {
 		pterm.Error.Println(err.Error())
 	} else {
+		if res == nil {
+			return
+		}
 		if resStr, ok := res.(string); ok {
 			pterm.Println(resStr)
 		} else if table, ok := res.(*uitable.Table); ok {

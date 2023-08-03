@@ -43,7 +43,6 @@ var (
 					}
 				}
 			}
-
 			miot := true
 			siid, iid := util.TwinsSplit(args[0], "-", "1")
 			var prop []interface{}

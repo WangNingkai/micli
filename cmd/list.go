@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/gosuri/uitable"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
@@ -52,18 +51,34 @@ var (
 				devices = lo.Filter(devices, func(s *miservice.DeviceInfo, index int) bool { return strings.Contains(s.Name, arg0) })
 			}
 
-			table := uitable.New()
-			table.MaxColWidth = 80
-			table.Wrap = true // wrap columns
+			var items []pterm.BulletListItem
 			for _, device := range devices {
-				table.AddRow("")
-				table.AddRow("Name:", device.Name)
-				table.AddRow("Did:", device.Did)
-				table.AddRow("Model:", device.Model)
-				table.AddRow("Token:", device.Token)
-				table.AddRow("")
+				items = append(items, pterm.BulletListItem{
+					Level:     0,
+					TextStyle: pterm.NewStyle(pterm.FgGreen),
+					Text:      device.Name,
+				})
+				items = append(items, pterm.BulletListItem{
+					Level:  1,
+					Text:   fmt.Sprintf("DID: %s", device.Did),
+					Bullet: ">",
+				})
+				items = append(items, pterm.BulletListItem{
+					Level:  1,
+					Text:   fmt.Sprintf("Model: %s", device.Model),
+					Bullet: ">",
+				})
+				items = append(items, pterm.BulletListItem{
+					Level:  1,
+					Text:   fmt.Sprintf("Token: %s", device.Token),
+					Bullet: ">",
+				})
 			}
-			handleResult(table, err)
+			err = pterm.DefaultBulletList.WithItems(items).Render()
+			if err != nil {
+				pterm.Error.Println(err)
+			}
+
 		},
 	}
 )
