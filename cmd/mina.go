@@ -9,12 +9,13 @@ import (
 	"micli/miservice"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
 	minaDeviceID string
 	minaCmd      = &cobra.Command{
-		Use:   "mina <list|tts|player> <arg1|keyword|message|play|pause|volume|status> <?arg2>",
+		Use:   "mina <list|tts|player|records> <arg1|keyword|message|play|pause|volume|status> <?arg2>",
 		Short: "Mina Service",
 		Long:  `Mina Service`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -25,7 +26,6 @@ var (
 			srv := miservice.NewMinaService(miAccount)
 			if len(args) > 0 {
 				command := args[0]
-
 				switch command {
 				case "list":
 					res, err = list(srv, "")
@@ -37,6 +37,10 @@ var (
 					}
 				case "player":
 					res, err = operatePlayer(srv, args[1:])
+				case "records":
+					res, err = askRecords(srv, args[1:])
+				default:
+					err = fmt.Errorf("unknown command: %s", command)
 				}
 			} else {
 				res, err = list(srv, "")
@@ -48,7 +52,7 @@ var (
 )
 
 func init() {
-	minaCmd.Example = "  mina list 小爱 \n  mina tts message \n  mina player status \n  mina player play\n  mina player pause\n  mina player volume 50"
+	minaCmd.Example = "  mina list 小爱 \n  mina tts message \n  mina records \n  mina player status \n  mina player play\n  mina player pause\n  mina player volume 50"
 	minaCmd.PersistentFlags().StringVarP(&minaDeviceID, "device", "d", "", "device id")
 }
 
@@ -72,6 +76,11 @@ func list(srv *miservice.MinaService, keyword string) (res interface{}, err erro
 		items = append(items, pterm.BulletListItem{
 			Level:  1,
 			Text:   fmt.Sprintf("Index: %d", i+1),
+			Bullet: ">",
+		})
+		items = append(items, pterm.BulletListItem{
+			Level:  1,
+			Text:   fmt.Sprintf("Hardware: %s", device.Hardware),
 			Bullet: ">",
 		})
 		items = append(items, pterm.BulletListItem{
@@ -173,6 +182,64 @@ func operatePlayer(srv *miservice.MinaService, args []string) (res interface{}, 
 	return
 }
 
+func askRecords(srv *miservice.MinaService, args []string) (res interface{}, err error) {
+	var limit int
+	if len(args) > 0 {
+		limit, _ = strconv.Atoi(args[0])
+	} else {
+		limit = 10
+	}
+
+	deviceId := minaDeviceID
+	var device *miservice.DeviceData
+	device, err = chooseMinaDeviceDetail(srv, deviceId)
+	if err != nil {
+		return
+	}
+	var resp *miservice.AskRecords
+	err = srv.LastAskList(device.DeviceID, device.Hardware, limit, &resp)
+
+	var record *miservice.AskRecord
+	err = json.Unmarshal([]byte(resp.Data), &record)
+	if err != nil {
+		return
+	}
+	var items []pterm.BulletListItem
+	items = append(items, pterm.BulletListItem{
+		Level:     0,
+		TextStyle: pterm.NewStyle(pterm.FgGreen),
+		Text:      device.Name,
+	})
+
+	for _, _record := range record.Records {
+		items = append(items, pterm.BulletListItem{
+			Level:     1,
+			Text:      fmt.Sprintf("Time: %s", time.UnixMilli(_record.Time).Format("2006-01-02 15:04:05")),
+			Bullet:    "-",
+			TextStyle: pterm.NewStyle(pterm.FgCyan),
+		})
+		items = append(items, pterm.BulletListItem{
+			Level:  2,
+			Text:   fmt.Sprintf("Q: %s", _record.Query),
+			Bullet: ">",
+		})
+		var a string
+		if len(_record.Answers) > 0 {
+			a = _record.Answers[0].Tts.Text
+		}
+
+		items = append(items, pterm.BulletListItem{
+			Level:  2,
+			Text:   fmt.Sprintf("A: %s", a),
+			Bullet: ">",
+		})
+	}
+	err = pterm.DefaultBulletList.WithItems(items).Render()
+
+	return
+
+}
+
 func chooseMinaDevice(srv *miservice.MinaService) (deviceId string, err error) {
 	if deviceId == "" {
 		var devices []*miservice.DeviceData
@@ -194,5 +261,33 @@ func chooseMinaDevice(srv *miservice.MinaService) (deviceId string, err error) {
 		pterm.Info.Println("Choose Device: " + choice)
 		deviceId = deviceMap[choice]
 	}
+	return
+}
+
+func chooseMinaDeviceDetail(srv *miservice.MinaService, deviceId string) (device *miservice.DeviceData, err error) {
+	var devices []*miservice.DeviceData
+	devices, err = srv.DeviceList(0)
+	if err != nil {
+		return
+	}
+	deviceMap := make(map[string]*miservice.DeviceData)
+	choices := make([]string, len(devices))
+	for i, _device := range devices {
+		if deviceId != "" {
+			if _device.DeviceID == deviceId {
+				device = _device
+				return
+			}
+		}
+		choice := fmt.Sprintf("%s - %s", _device.Name, _device.DeviceID)
+		deviceMap[choice] = _device
+		choices[i] = choice
+	}
+	choice, _ := pterm.DefaultInteractiveSelect.
+		WithDefaultText("Please select a device").
+		WithOptions(choices).
+		Show()
+	pterm.Info.Println("Choose Device: " + choice)
+	device = deviceMap[choice]
 	return
 }

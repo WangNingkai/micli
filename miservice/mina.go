@@ -5,6 +5,7 @@ import (
 	"micli/pkg/util"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 type MinaService struct {
@@ -73,6 +74,31 @@ type PlayerStatus struct {
 	} `json:"data"`
 }
 
+type AskRecords struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    string `json:"data"`
+}
+
+type AskRecord struct {
+	BitSet  []int `json:"bitSet"`
+	Records []struct {
+		BitSet  []int `json:"bitSet"`
+		Answers []struct {
+			BitSet []int  `json:"bitSet"`
+			Type   string `json:"type"`
+			Tts    struct {
+				BitSet []int  `json:"bitSet"`
+				Text   string `json:"text"`
+			} `json:"tts"`
+		} `json:"answers"`
+		Time      int64  `json:"time"`
+		Query     string `json:"query"`
+		RequestID string `json:"requestId"`
+	} `json:"records"`
+	NextEndTime int64 `json:"nextEndTime"`
+}
+
 func NewMinaService(account *Account) *MinaService {
 	return &MinaService{
 		account: account,
@@ -101,6 +127,17 @@ func (mina *MinaService) DeviceList(master int) (devices []*DeviceData, err erro
 		return nil, err
 	}
 	return res.Data, nil
+}
+
+func (mina *MinaService) LastAskList(deviceId string, hardware string, limit, out any) error {
+	headers := http.Header{
+		"User-Agent": []string{"MiHome/8.6.210 (com.xiaomi.mihome; build:8.6.210.385; iOS 16.6.0) Alamofire/8.6.210 MICO/iOSApp/appStore/8.6.210"},
+	}
+	prepareData := func(token *Tokens, cookies map[string]string) url.Values {
+		cookies["deviceId"] = deviceId
+		return nil
+	}
+	return mina.account.Request("micoapi", fmt.Sprintf("https://userprofile.mina.mi.com/device_profile/v2/conversation?source=dialogu&hardware=%s&timestamp=%d&limit=%d", hardware, time.Now().UnixNano(), limit), nil, prepareData, headers, true, out)
 }
 
 func (mina *MinaService) UbusRequest(deviceId, method, path string, message map[string]interface{}, res any) error {
