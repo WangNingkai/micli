@@ -101,7 +101,7 @@ var (
 					}
 				}
 				root := putils.TreeFromLeveledList(leveledList)
-				root.Text = pterm.NewStyle().Sprintf("Miot Spec [%s]", data.Description)
+				root.Text = pterm.NewStyle(pterm.FgRed).Sprintf("Miot Spec [%s]", data.Description)
 
 				err = pterm.DefaultTree.WithRoot(root).Render()
 				if err != nil {
