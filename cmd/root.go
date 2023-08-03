@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/gosuri/uitable"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -80,12 +79,10 @@ func handleResult(res interface{}, err error) {
 			return
 		}
 		if resStr, ok := res.(string); ok {
-			pterm.Println(resStr)
-		} else if table, ok := res.(*uitable.Table); ok {
-			pterm.Println(table)
+			pterm.NewStyle(pterm.FgGreen).Println(resStr)
 		} else {
 			resBytes, _ := json.MarshalIndent(res, "", "  ")
-			pterm.Println(string(resBytes))
+			pterm.NewStyle(pterm.FgGreen).Println(string(resBytes))
 		}
 	}
 }
