@@ -10,7 +10,7 @@ import (
 
 var (
 	actionCmd = &cobra.Command{
-		Use:   "action <siid[-piid]> <arg1|#NA> [...] ",
+		Use:   "action <siid[-piid]> <arg1> [...] ",
 		Short: "MIoT Action",
 		Long:  `MIoT Action`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -56,7 +56,7 @@ var (
 			}
 			if miot {
 				var _args []interface{}
-				if args[1] != "#NA" {
+				if len(args) > 1 {
 					for _, a := range args[1:] {
 						_args = append(_args, util.StringOrValue(a))
 					}

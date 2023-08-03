@@ -138,8 +138,8 @@ func StringToValue(str string) interface{} {
 }
 
 func StringOrValue(str string) interface{} {
-	if str[0] == '#' {
-		return StringToValue(str[1:])
+	if IsDigit(str) {
+		return StringToValue(str)
 	}
 	return str
 }
