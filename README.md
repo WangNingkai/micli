@@ -4,6 +4,7 @@ Take XiaoMi Cloud Service to the command line
 ## Usage
 
 ```shell
+
 MiCLI brings XiaoMi Cloud Service to your terminal.
 Free and open source.
 
@@ -22,6 +23,7 @@ Available Commands:
   miot_raw    Call MIoT Raw Request
   reset       Config Reset
   set         MIoT Properties Set
+  set_did     Set the default device id
   spec        MIoT Spec
 
 Flags:
@@ -29,6 +31,7 @@ Flags:
   -v, --version   version for micli
 
 Use "micli [command] --help" for more information about a command.
+
 ```
 
 ## MIoT Spec
