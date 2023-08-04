@@ -3,11 +3,13 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"micli/conf"
 	"micli/miservice"
 	"micli/pkg/util"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -31,7 +33,7 @@ var (
 			}
 			if !util.IsDigit(did) {
 				var devices []*miservice.DeviceInfo
-				devices, err = getDeviceListFromLocal() // Implement this method for the IOService
+				devices, err = getDeviceListFromLocal()
 				if err != nil {
 					handleResult(res, err)
 					return
@@ -51,7 +53,11 @@ var (
 
 			miot := true
 			var props [][]interface{}
-			for _, item := range args {
+			var _args []string
+			if len(args) > 0 {
+				_args = strings.Split(args[0], ",")
+			}
+			for _, item := range _args {
 				key, value := util.TwinsSplit(item, "=", "1")
 				siid, iid := util.TwinsSplit(key, "-", "1")
 				var prop []interface{}
@@ -68,7 +74,13 @@ var (
 			}
 
 			if miot {
-				res, err = srv.MiotSetProps(did, props)
+				var data []float64
+				data, err = srv.MiotSetProps(did, props)
+				arr := lo.Filter(data, func(item float64, index int) bool { return item != 0 })
+				if len(arr) > 0 {
+					err = errors.New("set failed")
+				}
+				res = "success."
 			} else {
 				/*var _props map[string]interface{}
 				for _, prop := range props {
@@ -85,5 +97,5 @@ var (
 
 func init() {
 	propsSetCmd.Flags().StringVarP(&did, "did", "d", "", "Device ID")
-	propsSetCmd.Example = "  set 2=#60,2-2=#false,3=test"
+	propsSetCmd.Example = "  set 2=60,2-2=false,3=test"
 }

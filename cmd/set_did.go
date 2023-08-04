@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	reset     bool
 	setDidCmd = &cobra.Command{
 		Use:   "set_did",
 		Short: "Set the default device id",
@@ -20,7 +21,7 @@ var (
 				res interface{}
 			)
 			did = conf.Cfg.Section("account").Key("MI_DID").MustString("")
-			if did == "" {
+			if did == "" || reset {
 				did, err = chooseDevice()
 				if err != nil {
 					return
@@ -55,3 +56,7 @@ var (
 		},
 	}
 )
+
+func init() {
+	setDidCmd.Flags().BoolVarP(&reset, "reset", "r", false, "reset the default device id")
+}
