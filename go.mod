@@ -3,26 +3,22 @@ module micli
 go 1.20
 
 require (
-	github.com/gosuri/uitable v0.0.4
 	github.com/json-iterator/go v1.1.12
-	github.com/pterm/pterm v0.12.63
+	github.com/pterm/pterm v0.12.65
 	github.com/samber/lo v1.38.1
 	github.com/spf13/cobra v1.7.0
 	gopkg.in/ini.v1 v1.67.0
 )
 
 require (
-	atomicgo.dev/cursor v0.1.3 // indirect
+	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
 	atomicgo.dev/schedule v0.0.2 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
-	github.com/fatih/color v1.15.0 // indirect
 	github.com/gookit/color v1.5.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
-	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
