@@ -1,0 +1,66 @@
+[
+  {
+    "keyword": "天气怎么样",
+    "step": [
+      {
+        "type": "request",
+        "url": "http://www.weather.com.cn/data/sk/101010100.html",
+        "data": "",
+        "method": "",
+        "headers": "",
+        "out": "res.body",
+        "silent": false,
+        "useTTSCmd": false,
+        "wait": false
+      }
+    ]
+  },
+  {
+    "keyword": "谁最帅",
+    "step": [
+      {
+        "type": "tts",
+        "url": "",
+        "data": "",
+        "method": "",
+        "headers": "",
+        "out": "你最帅",
+        "silent": false,
+        "useTTSCmd": false,
+        "wait": false
+      }
+    ]
+  },
+  {
+    "keyword": "关灯",
+    "step": [
+      {
+        "type": "action",
+        "url": "",
+        "data": "",
+        "method": "",
+        "headers": "",
+        "out": "你最帅",
+        "silent": false,
+        "useTTSCmd": false,
+        "wait": false
+      }
+    ]
+  },
+  {
+    "keyword": "关",
+    "step": [
+      {
+        "type": "action",
+        "url": "",
+        "data": "",
+        "method": "",
+        "headers": "",
+        "out": "",
+        "silent": false,
+        "useTTSCmd": false,
+        "wait": false
+      }
+    ]
+  }
+]

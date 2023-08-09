@@ -30,7 +30,7 @@ Free and open source.`,
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		os.Exit(0)
 	}
 }
 
@@ -55,12 +55,12 @@ func initConf() {
 	conf.Cfg, err = ini.Load(conf.ConfPath)
 	if err != nil {
 		pterm.Error.Printf("Fail to read config file: %v", err)
-		os.Exit(1)
+		os.Exit(0)
 	}
 	err = conf.Complete()
 	if err != nil {
 		pterm.Error.Println(err.Error())
-		os.Exit(1)
+		os.Exit(0)
 	}
 	tokenPath := fmt.Sprintf("%s/.mi.token", os.Getenv("HOME"))
 	miAccount = miservice.NewAccount(

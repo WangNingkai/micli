@@ -80,23 +80,25 @@ type AskRecords struct {
 	Data    string `json:"data"`
 }
 
-type AskRecord struct {
+type AskRecordItem struct {
 	BitSet  []int `json:"bitSet"`
-	Records []struct {
-		BitSet  []int `json:"bitSet"`
-		Answers []struct {
+	Answers []struct {
+		BitSet []int  `json:"bitSet"`
+		Type   string `json:"type"`
+		Tts    struct {
 			BitSet []int  `json:"bitSet"`
-			Type   string `json:"type"`
-			Tts    struct {
-				BitSet []int  `json:"bitSet"`
-				Text   string `json:"text"`
-			} `json:"tts"`
-		} `json:"answers"`
-		Time      int64  `json:"time"`
-		Query     string `json:"query"`
-		RequestID string `json:"requestId"`
-	} `json:"records"`
-	NextEndTime int64 `json:"nextEndTime"`
+			Text   string `json:"text"`
+		} `json:"tts"`
+	} `json:"answers"`
+	Time      int64  `json:"time"`
+	Query     string `json:"query"`
+	RequestID string `json:"requestId"`
+}
+
+type AskRecord struct {
+	BitSet      []int            `json:"bitSet"`
+	Records     []*AskRecordItem `json:"records"`
+	NextEndTime int64            `json:"nextEndTime"`
 }
 
 func NewMinaService(account *Account) *MinaService {

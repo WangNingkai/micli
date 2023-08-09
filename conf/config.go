@@ -36,13 +36,13 @@ func InitDefault() {
 		defer f.Close()
 		if err != nil {
 			pterm.Error.Printf("Fail to create config file: %v", err)
-			os.Exit(1)
+			os.Exit(0)
 		}
 		// 写入配置文件
 		_, err = f.WriteString(DefaultConf)
 		if err != nil {
 			pterm.Error.Printf("Fail to write config file: %v", err)
-			os.Exit(1)
+			os.Exit(0)
 		}
 
 	}
@@ -59,7 +59,7 @@ func Reset() {
 
 		if err != nil {
 			pterm.Error.Printf("Fail to create config file: %v", err)
-			os.Exit(1)
+			os.Exit(0)
 		}
 
 	} else {
@@ -71,7 +71,7 @@ func Reset() {
 	_, err = f.WriteString(DefaultConf)
 	if err != nil {
 		pterm.Error.Printf("Fail to write config file: %v", err)
-		os.Exit(1)
+		os.Exit(0)
 	}
 }
 

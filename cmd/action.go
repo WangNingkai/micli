@@ -84,5 +84,5 @@ var (
 
 func init() {
 	actionCmd.Flags().StringVarP(&did, "did", "d", "", "Device ID")
-	actionCmd.Example = "  action 2 #NA\n  action 5 Hello #1\n  action 5-4 Hello #1"
+	actionCmd.Example = "  action 2 #NA\n  action 5 Hello #1\n  action 5-4 Hello 0"
 }

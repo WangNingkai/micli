@@ -17,11 +17,12 @@ var (
 )
 
 func init() {
-	minaCmd.PersistentFlags().StringVarP(&minaDeviceID, "device", "d", "", "device id")
+	minaCmd.PersistentFlags().StringVarP(&minaDeviceID, "device", "d", "", "mina service DeviceId not did")
 	minaCmd.AddCommand(minaListCmd)
 	minaCmd.AddCommand(minaTtsCmd)
 	minaCmd.AddCommand(minaPlayerCmd)
 	minaCmd.AddCommand(minaRecordsCmd)
+	minaCmd.AddCommand(minaListenCmd)
 }
 
 func chooseMinaDevice(srv *miservice.MinaService) (deviceId string, err error) {

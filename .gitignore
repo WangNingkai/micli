@@ -21,9 +21,10 @@
 # Go workspace file
 go.work
 .idea
+.vscode
 conf.ini
 devices.json
-.vscode
+commands.json
 
 
 

@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -166,4 +167,46 @@ func IsDigit(s string) bool {
 func IsJSON(str string) bool {
 	var js interface{}
 	return json.Unmarshal([]byte(str), &js) == nil
+}
+
+var (
+	regex1             = regexp.MustCompile(`[「」『』《》“”'\"()（）]`)
+	regex2             = regexp.MustCompile(`(^|[^-])-($|[^-])`)
+	endingPunctuations = []string{"。", "？", "！", "；", ".", "?", "!", ";"}
+)
+
+// CalculateTTSElapse returns the elapsed time for TTS
+func CalculateTTSElapse(text string) time.Duration {
+	speed := 4.5
+
+	// Replace the first part of the regex
+	result := regex1.ReplaceAllString(text, "")
+
+	// Replace the second part of the regex
+	result = regex2.ReplaceAllString(result, "")
+
+	v := float64(len(result)) / speed
+	return time.Duration(v+1) * time.Second
+}
+
+func SplitSentences(textStream <-chan string) <-chan string {
+	result := make(chan string)
+	go func() {
+		cur := ""
+		for text := range textStream {
+			cur += text
+			for _, p := range endingPunctuations {
+				if strings.HasSuffix(cur, p) {
+					result <- cur
+					cur = ""
+					break
+				}
+			}
+		}
+		if cur != "" {
+			result <- cur
+		}
+		close(result)
+	}()
+	return result
 }
