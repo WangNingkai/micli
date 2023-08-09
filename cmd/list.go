@@ -15,7 +15,7 @@ var (
 	devicesPath = "devices.json"
 	reload      bool
 	listCmd     = &cobra.Command{
-		Use:   "list [name=full|name_keyword]",
+		Use:   "list [?name=full|name_keyword]",
 		Short: "Devs List",
 		Long:  `Devs List`,
 		Run: func(cmd *cobra.Command, args []string) {

@@ -12,7 +12,7 @@ import (
 
 var (
 	specCmd = &cobra.Command{
-		Use:   "spec [model_keyword|type_urn]",
+		Use:   "spec [?model_keyword|type_urn]",
 		Short: "MIoT Spec",
 		Long:  `MIoT Spec`,
 		Run: func(cmd *cobra.Command, args []string) {
