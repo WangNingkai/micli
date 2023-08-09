@@ -47,23 +47,21 @@ var (
 		Short: "Hack xiaoai Project",
 		Long:  `Hack xiaoai Project`,
 		Run: func(cmd *cobra.Command, args []string) {
+			s := NewServe()
 			c := make(chan os.Signal)
 			signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT)
 			go func() {
-				for s := range c {
-					switch s {
+				for sig := range c {
+					switch sig {
 					case syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT:
+						pterm.Success.Println("serve stopped")
 						os.Exit(0)
 					}
 				}
 			}()
-			s := NewServe()
-			err := s.loadCommands()
-			if err != nil {
-				pterm.Error.Println(err)
-				os.Exit(0)
+			if err := s.Run(); err != nil {
+				pterm.Fatal.Println(err)
 			}
-			s.Run()
 		},
 	}
 )
@@ -84,6 +82,7 @@ type Command struct {
 		Silent        bool   `json:"silent"`
 		UseTTSCommand bool   `json:"useTTSCmd"`
 		Wait          bool   `json:"wait"`
+		ActionText    string `json:"actionText"`
 	} `json:"step"`
 }
 type Serve struct {
@@ -154,9 +153,7 @@ func (s *Serve) pollLatestAsk() {
 			r := record.Records[0]
 			if r.Time > s.LastTimestamp {
 				s.LastTimestamp = r.Time
-				for _, i := range record.Records {
-					s.records <- i
-				}
+				s.records <- r
 			}
 		}
 		elapsed := time.Since(start)
@@ -245,7 +242,11 @@ func (s *Serve) Call(text string, silent bool) (err error) {
 	siid, aiid := util.TwinsSplit(_cmd, "-", "1")
 	sid, _ := strconv.Atoi(siid)
 	aid, _ := strconv.Atoi(aiid)
-	_, err = s.miioSrv.MiotAction(s.device.MiotDID, []int{sid, aid}, []interface{}{text, silent})
+	var silentInt = 0
+	if silent {
+		silentInt = 1
+	}
+	_, err = s.miioSrv.MiotAction(s.device.MiotDID, []int{sid, aid}, []interface{}{text, silentInt})
 	return
 }
 
@@ -259,12 +260,16 @@ func (s *Serve) waitForTTSDone() {
 	}
 }
 
-func (s *Serve) Run() {
-	s.LastTimestamp = time.Now().Unix()
-	pterm.Info.Println(s.LastTimestamp)
+func (s *Serve) Run() error {
+	err := s.loadCommands()
+	if err != nil {
+		pterm.Error.Println(err)
+		return err
+	}
+	s.LastTimestamp = time.Now().UnixMilli()
 	devices, err := s.minaSrv.DeviceList(0)
 	if err != nil {
-		return
+		return err
 	}
 	device, ok := lo.Find(devices, func(d *miservice.DeviceData) bool { return d.DeviceID == minaDeviceID })
 	if !ok {
@@ -285,6 +290,7 @@ func (s *Serve) Run() {
 			err = s.stop()
 			if err != nil {
 				pterm.Error.Println(err)
+				continue
 			}
 		} else {
 			s.waitForTTSDone()
@@ -299,6 +305,12 @@ func (s *Serve) Run() {
 				}
 			case "request":
 				pterm.Info.Println("execute request")
+				if step.Method == "" {
+					step.Method = "GET"
+				}
+				if step.URL == "" {
+					continue
+				}
 				client := req.C()
 				r := client.R()
 				if step.Headers != "" {
@@ -309,12 +321,20 @@ func (s *Serve) Run() {
 					}
 					req.SetHeaders(headers)
 				}
+				if step.Data != "" {
+					var data map[string]interface{}
+					err = json.Unmarshal([]byte(step.Data), &data)
+					if err != nil {
+						pterm.Error.Println(err)
+					}
+					req.SetBody(data)
+				}
 				var resp *req.Response
+				pterm.Info.Println(step.Method + " " + step.URL)
 				resp, err = r.Send(step.Method, step.URL)
 				if err != nil {
 					pterm.Error.Println(err)
 				} else {
-					pterm.Info.Println(resp.String())
 					if step.Out != "" {
 						value := gjson.Get(resp.String(), step.Out)
 						message := value.String()

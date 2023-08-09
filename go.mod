@@ -3,10 +3,12 @@ module micli
 go 1.20
 
 require (
+	github.com/imroc/req/v3 v3.40.1
 	github.com/json-iterator/go v1.1.12
 	github.com/pterm/pterm v0.12.65
 	github.com/samber/lo v1.38.1
 	github.com/spf13/cobra v1.7.0
+	github.com/tidwall/gjson v1.15.0
 	gopkg.in/ini.v1 v1.67.0
 )
 
@@ -23,7 +25,6 @@ require (
 	github.com/gookit/color v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/imroc/req/v3 v3.40.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
@@ -38,7 +39,6 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.8.2 // indirect
-	github.com/tidwall/gjson v1.15.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
