@@ -150,7 +150,7 @@ func (s *Serve) pollLatestAsk() {
 	var err error
 	for {
 		start := time.Now()
-		pterm.Info.Println("Poll Latest Ask At " + start.Format("2006-01-02 15:04:05"))
+		pterm.Debug.Println("Poll Latest Ask At " + start.Format("2006-01-02 15:04:05"))
 		var resp *miservice.AskRecords
 		err = s.minaSrv.LastAskList(s.device.DeviceID, s.device.Hardware, 2, &resp)
 		if err != nil {
@@ -322,7 +322,7 @@ func (s *Serve) Run() error {
 	go s.pollLatestAsk()
 	for {
 		record := <-s.records
-		pterm.Info.Println(record.Query)
+		pterm.Debug.Println("Latest Query: ", record.Query)
 		query := record.Query
 		command, match := lo.Find(s.commands, func(c *Command) bool { return strings.Contains(query, c.Keyword) })
 		if !match {
@@ -340,7 +340,7 @@ func (s *Serve) Run() error {
 		for _, step := range command.Step {
 			switch step.Type {
 			case "tts":
-				pterm.Info.Println("execute tts")
+				pterm.Debug.Println("Start execute tts")
 				if step.Tts.UseEdgeTTS {
 					err = s.edgeTTS(step.Tts.EdgeTTSVoice, step.Tts.Out, step.Tts.Wait)
 				} else {
@@ -351,7 +351,7 @@ func (s *Serve) Run() error {
 				}
 
 			case "request":
-				pterm.Info.Println("execute request")
+				pterm.Debug.Println("Start execute request")
 				if step.Request.Method == "" {
 					step.Request.Method = "GET"
 				}
@@ -404,7 +404,7 @@ func (s *Serve) Run() error {
 					}
 				}
 			case "action":
-				pterm.Info.Println("execute action")
+				pterm.Debug.Println("Start execute action")
 				err = s.Call(step.Action.Text, step.Action.Silent)
 				if err != nil {
 					pterm.Error.Println(err)

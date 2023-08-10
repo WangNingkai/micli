@@ -15,7 +15,7 @@ const voiceFormat = "audio-24khz-48kbitrate-mono-mp3"
 func TextToMp3(text string, ttsLang string) (string, error) {
 	ttsEdge := edgetts.EdgeTTS{}
 	ssml := edgetts.CreateSSML(text, ttsLang)
-	pterm.Debug.Println(ssml)
+	//pterm.Debug.Println(ssml)
 	b, err := ttsEdge.GetAudio(ssml, voiceFormat)
 	if err != nil {
 		pterm.Error.Printf("Error: %v\n", err)
