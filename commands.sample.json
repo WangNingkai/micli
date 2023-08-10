@@ -4,49 +4,62 @@
     "step": [
       {
         "type": "request",
-        "url": "http://www.weather.com.cn/data/sk/101010100.html",
-        "data": "",
-        "method": "",
-        "headers": "",
-        "out": "res.body",
-        "silent": false,
-        "useTTSCmd": false,
-        "wait": false,
-        "ActionText": ""
+        "mute": true,
+        "request": {
+          "url": "http://www.weather.com.cn/data/sk/101010100.html",
+          "data": "",
+          "method": "",
+          "headers": "",
+          "out": "res.data",
+          "useCmd": false,
+          "wait": true,
+          "useEdgeTTS": false,
+          "edgeVoice": "zh-CN-XiaoxiaoNeural"
+        }
       }
     ]
   },
   {
     "keyword": "谁最帅",
+    "mute": true,
     "step": [
       {
         "type": "tts",
-        "url": "",
-        "data": "",
-        "method": "",
-        "headers": "",
-        "out": "你最帅",
-        "silent": false,
-        "useTTSCmd": false,
-        "wait": false,
-        "ActionText": ""
+        "tts": {
+          "out": "你最帅",
+          "useCmd": false,
+          "wait": true,
+          "useEdgeTTS": false,
+          "edgeVoice": "zh-CN-XiaoxiaoNeural"
+        }
       }
     ]
   },
   {
     "keyword": "关灯",
+    "mute": true,
     "step": [
       {
         "type": "action",
-        "url": "",
-        "data": "",
-        "method": "",
-        "headers": "",
-        "out": "",
-        "silent": false,
-        "useTTSCmd": false,
-        "wait": false,
-        "ActionText": "关灯"
+        "action": {
+          "text": "",
+          "silent": false
+        }
+      }
+    ]
+  },
+  {
+    "keyword": "开启高级对话",
+    "mute": true,
+    "step": [
+      {
+        "type": "chat",
+        "chat": {
+          "end": "关闭高级对话",
+          "stream": true,
+          "useEdgeTTS": false,
+          "edgeVoice": "zh-CN-XiaoxiaoNeural"
+        }
       }
     ]
   }

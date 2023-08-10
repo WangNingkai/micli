@@ -25,6 +25,7 @@ go.work
 conf.ini
 devices.json
 commands.json
+data
 
 
 

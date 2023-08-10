@@ -37,12 +37,6 @@ func askRecords(srv *miservice.MinaService, args []string) (res interface{}, err
 	deviceId := minaDeviceID
 	if deviceId == "" {
 		deviceId = conf.Cfg.Section("mina").Key("DID").MustString("")
-		if deviceId == "" {
-			deviceId, err = chooseMinaDevice(srv)
-			if err != nil {
-				return
-			}
-		}
 	}
 	var device *miservice.DeviceData
 	device, err = chooseMinaDeviceDetail(srv, deviceId)

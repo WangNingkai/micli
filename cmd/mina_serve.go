@@ -2,12 +2,15 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"github.com/imroc/req/v3"
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
+	"micli/conf"
 	"micli/miservice"
+	"micli/pkg/tts"
 	"micli/pkg/util"
 	"os"
 	"os/signal"
@@ -72,17 +75,31 @@ func init() {
 
 type Command struct {
 	Keyword string `json:"keyword"`
+	Mute    bool   `json:"mute"`
 	Step    []struct {
-		Type          string `json:"type"`
-		URL           string `json:"url"`
-		Data          string `json:"data"`
-		Method        string `json:"method"`
-		Headers       string `json:"headers"`
-		Out           string `json:"out"`
-		Silent        bool   `json:"silent"`
-		UseTTSCommand bool   `json:"useTTSCmd"`
-		Wait          bool   `json:"wait"`
-		ActionText    string `json:"actionText"`
+		Type    string `json:"type"`
+		Request struct {
+			URL          string `json:"url"`
+			Data         string `json:"data"`
+			Method       string `json:"method"`
+			Headers      string `json:"headers"`
+			Out          string `json:"out"`
+			UseCmd       bool   `json:"useCmd"`
+			Wait         bool   `json:"wait"`
+			UseEdgeTTS   bool   `json:"useEdgeTTS"`
+			EdgeTTSVoice string `json:"edgeTTSVoice"`
+		} `json:"request,omitempty"`
+		Action struct {
+			Text   string `json:"text"`
+			Silent bool   `json:"silent"`
+		} `json:"action,omitempty"`
+		Tts struct {
+			Out          string `json:"out"`
+			UseCmd       bool   `json:"useCmd"`
+			Wait         bool   `json:"wait"`
+			UseEdgeTTS   bool   `json:"useEdgeTTS"`
+			EdgeTTSVoice string `json:"edgeTTSVoice"`
+		} `json:"tts,omitempty"`
 	} `json:"step"`
 }
 type Serve struct {
@@ -232,6 +249,33 @@ func (s *Serve) tts(useCommand bool, message string, wait bool) (err error) {
 	return
 }
 
+func (s *Serve) edgeTTS(voice string, message string, wait bool) (err error) {
+	var fp string
+	if voice == "" {
+		voice = "zh-CN-XiaoxiaoNeural"
+	}
+	fp, err = tts.TextToMp3(message, voice)
+	if err != nil {
+		return
+	}
+	client := req.C()
+	r := client.R()
+	r.SetFile("file", fp)
+	resp, err := r.Put(fmt.Sprintf("%s/edge_tts.mp3", conf.Cfg.Section("file").Key("TRANSFER_SH").MustString("https://transfer.sh")))
+	textUrl := resp.String()
+	_, err = s.minaSrv.PlayByUrl(s.device.DeviceID, textUrl)
+	if err != nil {
+		return
+	}
+	if wait {
+		elapse := util.CalculateTTSElapse(message)
+		time.Sleep(elapse)
+		s.waitForTTSDone()
+	}
+
+	return
+}
+
 func (s *Serve) Call(text string, silent bool) (err error) {
 	v, ok := HardwareCommandDict[s.device.Hardware]
 	if !ok {
@@ -261,20 +305,18 @@ func (s *Serve) waitForTTSDone() {
 }
 
 func (s *Serve) Run() error {
-	err := s.loadCommands()
+	err := s.loadCommands() // 加载训练计划
 	if err != nil {
 		pterm.Error.Println(err)
 		return err
 	}
 	s.LastTimestamp = time.Now().UnixMilli()
-	devices, err := s.minaSrv.DeviceList(0)
-	if err != nil {
-		return err
+	deviceId := minaDeviceID
+	if deviceId == "" {
+		deviceId = conf.Cfg.Section("mina").Key("DID").MustString("")
 	}
-	device, ok := lo.Find(devices, func(d *miservice.DeviceData) bool { return d.DeviceID == minaDeviceID })
-	if !ok {
-		device = devices[0]
-	}
+	var device *miservice.DeviceData
+	device, err = chooseMinaDeviceDetail(s.minaSrv, deviceId)
 	s.device = device
 	pterm.Info.Println("Start Listen Device: " + device.Name)
 	go s.pollLatestAsk()
@@ -286,7 +328,7 @@ func (s *Serve) Run() error {
 		if !match {
 			continue
 		}
-		if mute {
+		if command.Mute {
 			err = s.stop()
 			if err != nil {
 				pterm.Error.Println(err)
@@ -299,46 +341,63 @@ func (s *Serve) Run() error {
 			switch step.Type {
 			case "tts":
 				pterm.Info.Println("execute tts")
-				err = s.tts(step.UseTTSCommand, step.Out, step.Wait)
+				if step.Tts.UseEdgeTTS {
+					err = s.edgeTTS(step.Tts.EdgeTTSVoice, step.Tts.Out, step.Tts.Wait)
+				} else {
+					err = s.tts(step.Tts.UseCmd, step.Tts.Out, step.Tts.Wait)
+				}
 				if err != nil {
 					pterm.Error.Println(err)
 				}
+
 			case "request":
 				pterm.Info.Println("execute request")
-				if step.Method == "" {
-					step.Method = "GET"
+				if step.Request.Method == "" {
+					step.Request.Method = "GET"
 				}
-				if step.URL == "" {
+				if step.Request.URL == "" {
 					continue
 				}
 				client := req.C()
 				r := client.R()
-				if step.Headers != "" {
+				if step.Request.Headers != "" {
 					var headers map[string]string
-					err = json.Unmarshal([]byte(step.Headers), &headers)
+					err = json.Unmarshal([]byte(step.Request.Headers), &headers)
 					if err != nil {
 						pterm.Error.Println(err)
 					}
 					req.SetHeaders(headers)
 				}
-				if step.Data != "" {
+				if step.Request.Data != "" {
 					var data map[string]interface{}
-					err = json.Unmarshal([]byte(step.Data), &data)
+					err = json.Unmarshal([]byte(step.Request.Data), &data)
 					if err != nil {
 						pterm.Error.Println(err)
 					}
 					req.SetBody(data)
 				}
 				var resp *req.Response
-				pterm.Info.Println(step.Method + " " + step.URL)
-				resp, err = r.Send(step.Method, step.URL)
+				pterm.Info.Println(step.Request.Method + " " + step.Request.URL)
+				resp, err = r.Send(step.Request.Method, step.Request.URL)
 				if err != nil {
 					pterm.Error.Println(err)
 				} else {
-					if step.Out != "" {
-						value := gjson.Get(resp.String(), step.Out)
-						message := value.String()
-						err = s.tts(step.UseTTSCommand, message, step.Wait)
+					if step.Request.Out != "" {
+						if strings.Contains(step.Request.Out, ".") {
+							value := gjson.Get(resp.String(), step.Request.Out)
+							message := value.String()
+							if step.Tts.UseEdgeTTS {
+								err = s.edgeTTS(step.Request.EdgeTTSVoice, step.Request.Out, step.Request.Wait)
+							} else {
+								err = s.tts(step.Request.UseCmd, message, step.Request.Wait)
+							}
+						} else {
+							if step.Request.UseEdgeTTS {
+								err = s.edgeTTS(step.Request.EdgeTTSVoice, step.Request.Out, step.Request.Wait)
+							} else {
+								err = s.tts(step.Request.UseCmd, step.Request.Out, step.Request.Wait)
+							}
+						}
 						if err != nil {
 							pterm.Error.Println(err)
 						}
@@ -346,7 +405,7 @@ func (s *Serve) Run() error {
 				}
 			case "action":
 				pterm.Info.Println("execute action")
-				err = s.Call(step.Out, step.Silent)
+				err = s.Call(step.Action.Text, step.Action.Silent)
 				if err != nil {
 					pterm.Error.Println(err)
 				}

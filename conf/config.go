@@ -21,6 +21,9 @@ PROXY = ""
 [mina]
 DID = ""
 
+[file]
+TRANSFER_SH = "https://transfer.sh"
+
 `
 
 var (
