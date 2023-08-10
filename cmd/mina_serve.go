@@ -166,12 +166,9 @@ func (s *Serve) pollLatestAsk() {
 			pterm.Error.Println(err)
 			continue
 		}
-		pterm.Debug.Println("Last Record: ", time.UnixMilli(record.Records[0].Time).Format("2006-01-02 15:04:05"))
-		pterm.Debug.Println("Last Timestamp: ", time.UnixMilli(s.LastTimestamp).Format("2006-01-02 15:04:05"))
 		if len(record.Records) > 0 {
 			r := record.Records[0]
 			if time.UnixMilli(record.Records[0].Time).After(time.UnixMilli(s.LastTimestamp)) {
-				pterm.Debug.Println("New Record: ", r.Query)
 				s.LastTimestamp = r.Time
 				s.records <- r
 			}
