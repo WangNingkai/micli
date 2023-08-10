@@ -78,6 +78,9 @@ var (
 					}
 				}
 				res, err = srv.MiotAction(did, ids, _args)
+				if res.(float64) == 0 {
+					res = "success."
+				}
 			}
 			handleResult(res, err)
 		},

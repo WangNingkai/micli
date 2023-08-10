@@ -3,11 +3,10 @@ package tts
 import (
 	"fmt"
 	"github.com/pterm/pterm"
+	"micli/pkg/tts/edgetts"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/longbai/edgetts"
 )
 
 const voiceFormat = "audio-24khz-48kbitrate-mono-mp3"

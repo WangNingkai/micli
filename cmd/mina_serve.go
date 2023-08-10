@@ -166,9 +166,12 @@ func (s *Serve) pollLatestAsk() {
 			pterm.Error.Println(err)
 			continue
 		}
+		pterm.Debug.Println("Last Record: ", time.UnixMilli(record.Records[0].Time).Format("2006-01-02 15:04:05"))
+		pterm.Debug.Println("Last Timestamp: ", time.UnixMilli(s.LastTimestamp).Format("2006-01-02 15:04:05"))
 		if len(record.Records) > 0 {
 			r := record.Records[0]
-			if r.Time > s.LastTimestamp {
+			if time.UnixMilli(record.Records[0].Time).After(time.UnixMilli(s.LastTimestamp)) {
+				pterm.Debug.Println("New Record: ", r.Query)
 				s.LastTimestamp = r.Time
 				s.records <- r
 			}
@@ -263,6 +266,7 @@ func (s *Serve) edgeTTS(voice string, message string, wait bool) (err error) {
 	r.SetFile("file", fp)
 	resp, err := r.Put(fmt.Sprintf("%s/edge_tts.mp3", conf.Cfg.Section("file").Key("TRANSFER_SH").MustString("https://transfer.sh")))
 	textUrl := resp.String()
+	pterm.Debug.Println("Play Audio URL: ", textUrl)
 	_, err = s.minaSrv.PlayByUrl(s.device.DeviceID, textUrl)
 	if err != nil {
 		return
@@ -310,7 +314,6 @@ func (s *Serve) Run() error {
 		pterm.Error.Println(err)
 		return err
 	}
-	s.LastTimestamp = time.Now().UnixMilli()
 	deviceId := minaDeviceID
 	if deviceId == "" {
 		deviceId = conf.Cfg.Section("mina").Key("DID").MustString("")
@@ -319,6 +322,7 @@ func (s *Serve) Run() error {
 	device, err = chooseMinaDeviceDetail(s.minaSrv, deviceId)
 	s.device = device
 	pterm.Info.Println("Start Listen Device: " + device.Name)
+	s.LastTimestamp = time.Now().UnixMilli()
 	go s.pollLatestAsk()
 	for {
 		record := <-s.records
