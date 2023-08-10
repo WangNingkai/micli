@@ -16,9 +16,8 @@ var (
 				res interface{}
 				err error
 			)
-			srv := miservice.NewMinaService(miAccount)
 			if len(args) > 0 {
-				res, err = doTTS(srv, args)
+				res, err = doTTS(minaSrv, args)
 			} else {
 				err = errors.New("tts message is empty")
 			}

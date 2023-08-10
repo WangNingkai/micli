@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/imroc/req/v3 v3.40.1
 	github.com/json-iterator/go v1.1.12
+	github.com/longbai/edgetts v0.0.0-20230420124258-9b19b13a79f5
 	github.com/pterm/pterm v0.12.65
 	github.com/samber/lo v1.38.1
 	github.com/spf13/cobra v1.7.0
@@ -23,6 +24,7 @@ require (
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/pprof v0.0.0-20230808223545-4887780b67fb // indirect
 	github.com/gookit/color v1.5.3 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -37,6 +39,7 @@ require (
 	github.com/quic-go/quic-go v0.37.3 // indirect
 	github.com/refraction-networking/utls v1.4.1 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.8.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect

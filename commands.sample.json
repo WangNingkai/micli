@@ -11,7 +11,8 @@
         "out": "res.body",
         "silent": false,
         "useTTSCmd": false,
-        "wait": false
+        "wait": false,
+        "ActionText": ""
       }
     ]
   },
@@ -27,7 +28,8 @@
         "out": "你最帅",
         "silent": false,
         "useTTSCmd": false,
-        "wait": false
+        "wait": false,
+        "ActionText": ""
       }
     ]
   },
@@ -40,26 +42,11 @@
         "data": "",
         "method": "",
         "headers": "",
-        "out": "你最帅",
-        "silent": false,
-        "useTTSCmd": false,
-        "wait": false
-      }
-    ]
-  },
-  {
-    "keyword": "关",
-    "step": [
-      {
-        "type": "action",
-        "url": "",
-        "data": "",
-        "method": "",
-        "headers": "",
         "out": "",
         "silent": false,
         "useTTSCmd": false,
-        "wait": false
+        "wait": false,
+        "ActionText": "关灯"
       }
     ]
   }

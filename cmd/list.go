@@ -12,13 +12,14 @@ import (
 )
 
 var (
-	devicesPath = "devices.json"
+	devicesPath = "./data/devices.json"
 	reload      bool
 	listCmd     = &cobra.Command{
 		Use:   "list [?name=full|name_keyword]",
 		Short: "Devs List",
 		Long:  `Devs List`,
 		Run: func(cmd *cobra.Command, args []string) {
+			pterm.Debug.Println("listCmd called")
 			argLen := len(args)
 			var (
 				arg0    string
@@ -32,18 +33,18 @@ var (
 			if reload {
 				devices, err = getDeviceListFromRemote()
 				if err != nil {
-					handleResult(nil, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 				err = writeIntoLocal(devices)
 				if err != nil {
-					handleResult(nil, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 			} else {
 				devices, err = getDeviceListFromLocal()
 				if err != nil {
-					handleResult(nil, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 			}
@@ -111,8 +112,7 @@ func getDeviceListFromLocal() (list []*miservice.DeviceInfo, err error) {
 		return
 	}
 	defer f.Close()
-	j := json.NewDecoder(f)
-	err = j.Decode(&list)
+	err = json.NewDecoder(f).Decode(&list)
 	if err != nil {
 		return
 	}
@@ -121,7 +121,7 @@ func getDeviceListFromLocal() (list []*miservice.DeviceInfo, err error) {
 
 func writeIntoLocal(list []*miservice.DeviceInfo) (err error) {
 	var f *os.File
-	f, err = os.Create(devicesPath)
+	f, err = util.CreatNestedFile(devicesPath)
 	if err != nil {
 		return
 	}

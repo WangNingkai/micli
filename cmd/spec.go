@@ -28,7 +28,7 @@ var (
 				var devices []*miservice.DeviceInfo
 				devices, err = getDeviceListFromLocal()
 				if err != nil {
-					handleResult(nil, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 				choices := make([]string, len(devices))
@@ -47,7 +47,7 @@ var (
 			var data *miservice.MiotSpecInstancesData
 			data, err = srv.MiotSpec(keyword)
 			if err != nil {
-				handleResult(nil, err)
+				pterm.Error.Println(err.Error())
 				return
 			}
 			// https://miot-spec.org/miot-spec-v2/spec/service?type=
@@ -105,7 +105,7 @@ var (
 
 				err = pterm.DefaultTree.WithRoot(root).Render()
 				if err != nil {
-					handleResult(nil, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 			}

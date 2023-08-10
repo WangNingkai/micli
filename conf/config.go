@@ -15,7 +15,11 @@ MI_USER = ""
 MI_PASS = ""
 MI_DID = ""
 REGION = ""
-
+[openai]
+KEY = ""
+PROXY = ""
+[mina]
+DID = ""
 
 `
 
@@ -25,7 +29,6 @@ var (
 )
 
 func InitDefault() {
-
 	if !util.Exists(ConfPath) {
 		var (
 			f   *os.File
@@ -44,7 +47,6 @@ func InitDefault() {
 			pterm.Error.Printf("Fail to write config file: %v", err)
 			os.Exit(0)
 		}
-
 	}
 }
 
@@ -145,6 +147,22 @@ func Complete() (err error) {
 
 func SetDefaultDid(did string) (err error) {
 	Cfg.Section("account").Key("MI_DID").SetValue(did)
+	err = Cfg.SaveTo(ConfPath)
+	if err != nil {
+		pterm.Error.Printf("Fail to write config file: %v", err)
+		return
+	}
+	pterm.Success.Println("Config saved! Please rerun the command.")
+	err = Cfg.Reload()
+	if err != nil {
+		pterm.Error.Printf("Fail to reload config file: %v", err)
+		return
+	}
+	return
+}
+
+func SetDefaultMinaDid(did string) (err error) {
+	Cfg.Section("mina").Key("DID").SetValue(did)
 	err = Cfg.SaveTo(ConfPath)
 	if err != nil {
 		pterm.Error.Printf("Fail to write config file: %v", err)

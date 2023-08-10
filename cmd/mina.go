@@ -8,8 +8,7 @@ import (
 )
 
 var (
-	minaDeviceID string
-	minaCmd      = &cobra.Command{
+	minaCmd = &cobra.Command{
 		Use:   "mina",
 		Short: "Mina Service",
 		Long:  `Mina Service`,
@@ -17,12 +16,13 @@ var (
 )
 
 func init() {
-	minaCmd.PersistentFlags().StringVarP(&minaDeviceID, "device", "d", "", "mina service DeviceId not did")
+	minaCmd.PersistentFlags().StringVarP(&minaDeviceID, "device", "d", "", "mina service device id, not miot did")
 	minaCmd.AddCommand(minaListCmd)
 	minaCmd.AddCommand(minaTtsCmd)
 	minaCmd.AddCommand(minaPlayerCmd)
 	minaCmd.AddCommand(minaRecordsCmd)
-	minaCmd.AddCommand(minaListenCmd)
+	minaCmd.AddCommand(minaServeCmd)
+	minaCmd.AddCommand(setMinaDidCmd)
 }
 
 func chooseMinaDevice(srv *miservice.MinaService) (deviceId string, err error) {

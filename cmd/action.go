@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"micli/conf"
 	"micli/miservice"
@@ -24,6 +25,7 @@ var (
 				if did == "" {
 					did, err = chooseDevice()
 					if err != nil {
+						pterm.Error.Println(err.Error())
 						return
 					}
 				}
@@ -32,12 +34,12 @@ var (
 				var devices []*miservice.DeviceInfo
 				devices, err = getDeviceListFromLocal() // Implement this method for the IOService
 				if err != nil {
-					handleResult(res, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 				if len(devices) == 0 {
 					err = fmt.Errorf("no device found")
-					handleResult(res, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 				for _, device := range devices {

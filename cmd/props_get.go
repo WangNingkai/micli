@@ -19,17 +19,17 @@ var (
 		Short: "MIoT Properties Get",
 		Long:  `MIoT Properties Get`,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			var (
-				res     interface{}
-				err     error
-				d_model string
+				res         interface{}
+				err         error
+				deviceModel string
 			)
 			if did == "" {
 				did = conf.Cfg.Section("account").Key("MI_DID").MustString("")
 				if did == "" {
 					did, err = chooseDevice()
 					if err != nil {
+						pterm.Error.Println(err.Error())
 						return
 					}
 				}
@@ -38,41 +38,41 @@ var (
 			if !util.IsDigit(did) {
 				devices, err = getDeviceListFromLocal() // Implement this method for the IOService
 				if err != nil {
-					handleResult(res, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 				if len(devices) == 0 {
 					err = fmt.Errorf("no device found")
-					handleResult(res, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 				for _, device := range devices {
 					if device.Name == did {
 						did = device.Did
-						d_model = device.Model
+						deviceModel = device.Model
 						break
 					}
 				}
 			} else {
 				devices, err = getDeviceListFromLocal() // Implement this method for the IOService
 				if err != nil {
-					handleResult(res, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 				device, _ := lo.Find(devices, func(d *miservice.DeviceInfo) bool { return d.Did == did })
 				if device != nil {
-					d_model = device.Model
+					deviceModel = device.Model
 				}
 			}
 			var specs *miservice.MiotSpecInstancesData
-			specs, err = srv.MiotSpec(d_model)
+			specs, err = srv.MiotSpec(deviceModel)
 			if err != nil {
-				handleResult(nil, err)
+				pterm.Error.Println(err.Error())
 				return
 			}
 			if len(specs.Services) == 0 {
 				err = fmt.Errorf("no service found")
-				handleResult(res, err)
+				pterm.Error.Println(err.Error())
 				return
 			}
 

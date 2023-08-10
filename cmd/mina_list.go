@@ -17,15 +17,15 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			var (
 				keyword string
-				res     interface{}
 				err     error
 			)
-			srv := miservice.NewMinaService(miAccount)
 			if len(args) > 0 {
 				keyword = args[0]
 			}
-			res, err = list(srv, keyword)
-			handleResult(res, err)
+			_, err = list(minaSrv, keyword)
+			if err != nil {
+				pterm.Error.Println(err.Error())
+			}
 		},
 	}
 )

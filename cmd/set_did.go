@@ -24,6 +24,7 @@ var (
 			if did == "" || reset {
 				did, err = chooseDevice()
 				if err != nil {
+					pterm.Error.Println(err.Error())
 					return
 				}
 			} else {
@@ -34,12 +35,12 @@ var (
 				var devices []*miservice.DeviceInfo
 				devices, err = getDeviceListFromLocal()
 				if err != nil {
-					handleResult(res, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 				if len(devices) == 0 {
 					err = fmt.Errorf("no device found")
-					handleResult(res, err)
+					pterm.Error.Println(err.Error())
 					return
 				}
 				for _, device := range devices {

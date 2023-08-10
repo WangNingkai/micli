@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"micli/conf"
 	"micli/miservice"
 	"strconv"
 	"time"
@@ -19,8 +20,7 @@ var (
 				res interface{}
 				err error
 			)
-			srv := miservice.NewMinaService(miAccount)
-			res, err = askRecords(srv, args)
+			res, err = askRecords(minaSrv, args)
 			handleResult(res, err)
 		},
 	}
@@ -35,6 +35,15 @@ func askRecords(srv *miservice.MinaService, args []string) (res interface{}, err
 	}
 
 	deviceId := minaDeviceID
+	if deviceId == "" {
+		deviceId = conf.Cfg.Section("mina").Key("DID").MustString("")
+		if deviceId == "" {
+			deviceId, err = chooseMinaDevice(srv)
+			if err != nil {
+				return
+			}
+		}
+	}
 	var device *miservice.DeviceData
 	device, err = chooseMinaDeviceDetail(srv, deviceId)
 	if err != nil {

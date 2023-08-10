@@ -42,8 +42,8 @@ var (
 		"L09B": {"7-3", "7-1", "7-4"},
 		// add more here
 	}
-	minaListenCmd = &cobra.Command{
-		Use:   "listen",
+	minaServeCmd = &cobra.Command{
+		Use:   "serve",
 		Short: "Hack xiaoai Project",
 		Long:  `Hack xiaoai Project`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -54,7 +54,7 @@ var (
 				for sig := range c {
 					switch sig {
 					case syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT:
-						pterm.Success.Println("serve stopped")
+						pterm.Success.Println("serve stopped.")
 						os.Exit(0)
 					}
 				}
@@ -67,7 +67,7 @@ var (
 )
 
 func init() {
-	minaListenCmd.Flags().BoolVarP(&mute, "mute", "m", true, "mute")
+	minaServeCmd.Flags().BoolVarP(&mute, "mute", "m", true, "mute")
 }
 
 type Command struct {
@@ -101,8 +101,8 @@ type Serve struct {
 func NewServe() *Serve {
 	return &Serve{
 		records: make(chan *miservice.AskRecordItem),
-		minaSrv: miservice.NewMinaService(miAccount),
-		miioSrv: miservice.NewIOService(miAccount),
+		minaSrv: minaSrv,
+		miioSrv: srv,
 	}
 }
 

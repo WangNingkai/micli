@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"micli/conf"
 	"micli/miservice"
 	"strconv"
 )
@@ -19,8 +20,7 @@ var (
 				res interface{}
 				err error
 			)
-			srv := miservice.NewMinaService(miAccount)
-			res, err = operatePlayer(srv, args)
+			res, err = operatePlayer(minaSrv, args)
 			handleResult(res, err)
 		},
 	}
@@ -30,9 +30,12 @@ var (
 func operatePlayer(srv *miservice.MinaService, args []string) (res interface{}, err error) {
 	deviceId := minaDeviceID
 	if deviceId == "" {
-		deviceId, err = chooseMinaDevice(srv)
-		if err != nil {
-			return
+		deviceId = conf.Cfg.Section("mina").Key("DID").MustString("")
+		if deviceId == "" {
+			deviceId, err = chooseMinaDevice(srv)
+			if err != nil {
+				return
+			}
 		}
 	}
 	if len(args) > 0 {

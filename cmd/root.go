@@ -14,10 +14,12 @@ import (
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 var (
-	miAccount *miservice.Account
-	srv       *miservice.IOService
-	did       string
-	rootCmd   = &cobra.Command{
+	miAccount    *miservice.Account
+	srv          *miservice.IOService
+	minaSrv      *miservice.MinaService
+	did          string
+	minaDeviceID string
+	rootCmd      = &cobra.Command{
 		Version: "1.0.0",
 		Use:     "micli",
 		Short:   "Take XiaoMi Cloud Service to the command line",
@@ -53,6 +55,9 @@ func initConf() {
 	var err error
 	conf.InitDefault()
 	conf.Cfg, err = ini.Load(conf.ConfPath)
+	if conf.Cfg.Section("app").Key("DEBUG").MustBool(false) {
+		pterm.EnableDebugMessages()
+	}
 	if err != nil {
 		pterm.Error.Printf("Fail to read config file: %v", err)
 		os.Exit(0)
@@ -70,6 +75,7 @@ func initConf() {
 		miservice.NewTokenStore(tokenPath),
 	)
 	srv = miservice.NewIOService(miAccount)
+	minaSrv = miservice.NewMinaService(miAccount)
 }
 
 func handleResult(res interface{}, err error) {

@@ -3,12 +3,12 @@ package miservice
 import (
 	"crypto/rc4"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"micli/pkg/util"
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 )
 
@@ -260,7 +260,8 @@ func (io *IOService) MiotAction(did string, iid []int, args []interface{}) (floa
 
 func (io *IOService) MiotSpec(keyword string) (data *MiotSpecInstancesData, err error) {
 	if keyword == "" || !strings.HasPrefix(keyword, "urn") {
-		p := path.Join(os.TempDir(), "miot-spec.json")
+		//p := path.Join(os.TempDir(), "miot-spec.json")
+		p := "./data/miot-spec.json"
 		var specs map[string]string
 		specs, err = io.loadSpec(p)
 		if err != nil {
@@ -280,12 +281,13 @@ func (io *IOService) MiotSpec(keyword string) (data *MiotSpecInstancesData, err 
 				specs[v.Model] = v.Type
 			}
 			var f *os.File
-			f, err = os.Create(p)
-			if err == nil {
-				defer f.Close()
-				_ = json.NewEncoder(f).Encode(specs)
+			// 创建初始配置文件
+			f, err = util.CreatNestedFile(p)
+			defer f.Close()
+			if err != nil {
+				return
 			}
-			return
+			_ = json.NewEncoder(f).Encode(specs)
 		}
 		specs = io.getSpec(keyword, specs)
 		if len(specs) != 1 {
@@ -370,6 +372,9 @@ func (io *IOService) getSpec(keyword string, specs map[string]string) map[string
 }
 
 func (io *IOService) loadSpec(p string) (map[string]string, error) {
+	if !util.Exists(p) {
+		return nil, errors.New("spec file not found")
+	}
 	f, err := os.Open(p)
 	if err != nil {
 		return nil, err

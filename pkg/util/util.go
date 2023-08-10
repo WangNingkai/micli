@@ -12,6 +12,7 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"io"
 	mathRand "math/rand"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -209,4 +210,20 @@ func SplitSentences(textStream <-chan string) <-chan string {
 		close(result)
 	}()
 	return result
+}
+
+func GetHostname() string {
+	if hostname, exists := os.LookupEnv("MICLI_HOSTNAME"); exists {
+		return hostname
+	}
+
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return ""
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddr.IP.String()
 }
