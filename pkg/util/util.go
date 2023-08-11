@@ -227,3 +227,12 @@ func GetHostname() string {
 
 	return localAddr.IP.String()
 }
+
+func FindKeyByPartialString(dictionary map[string]string, partialKey string) string {
+	for key, value := range dictionary {
+		if strings.Contains(partialKey, key) {
+			return value
+		}
+	}
+	return ""
+}

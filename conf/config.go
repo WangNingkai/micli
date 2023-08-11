@@ -10,16 +10,20 @@ import (
 const DefaultConf = `# MiService Config
 [app]
 DEBUG = false
+
 [account]
 MI_USER = ""
 MI_PASS = ""
 MI_DID = ""
 REGION = ""
+
 [openai]
 KEY = ""
-PROXY = ""
+BASE_URL = ""
+
 [mina]
 DID = ""
+
 [file]
 TRANSFER_SH = "https://transfer.sh"
 `

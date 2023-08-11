@@ -3,7 +3,7 @@ package cmd
 import (
 	"errors"
 	"github.com/spf13/cobra"
-	"micli/miservice"
+	"micli/pkg/miservice"
 )
 
 var (

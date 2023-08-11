@@ -6,7 +6,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"micli/conf"
-	"micli/miservice"
+	"micli/pkg/miservice"
 	"strconv"
 )
 

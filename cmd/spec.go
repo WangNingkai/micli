@@ -6,7 +6,7 @@ import (
 	"github.com/pterm/pterm/putils"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
-	"micli/miservice"
+	"micli/pkg/miservice"
 	"strings"
 )
 

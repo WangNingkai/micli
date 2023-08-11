@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
 	"micli/conf"
-	"micli/miservice"
 	"micli/pkg/jarvis"
+	"micli/pkg/miservice"
 	"micli/pkg/tts"
 	"micli/pkg/util"
 	"os"
@@ -46,6 +46,14 @@ var (
 		"L09B": {"7-3", "7-1", "7-4"},
 		// add more here
 	}
+	EdgeTtsDict = map[string]string{
+		"用英语": "en-US-AriaNeural",
+		"用日语": "ja-JP-NanamiNeural",
+		"用法语": "fr-BE-CharlineNeural",
+		"用韩语": "ko-KR-SunHiNeural",
+		"用德语": "de-AT-JonasNeural",
+		//add more here
+	}
 	minaServeCmd = &cobra.Command{
 		Use:   "serve",
 		Short: "Hack xiaoai Project",
@@ -77,7 +85,16 @@ func init() {
 type Command struct {
 	Keyword string `json:"keyword"`
 	Mute    bool   `json:"mute"`
-	Step    []struct {
+	Type    string `json:"type"`
+	Config  struct {
+		Stream       bool   `json:"stream"`
+		UseEdgeTTS   bool   `json:"useEdgeTTS"`
+		EdgeTTSVoice string `json:"edgeTTSVoice"`
+		UseCmd       bool   `json:"useCmd"`
+		Wait         bool   `json:"wait"`
+		EndFlag      string `json:"endFlag"`
+	} `json:"config,omitempty"`
+	Step []struct {
 		Type    string `json:"type"`
 		Request struct {
 			URL          string `json:"url"`
@@ -101,15 +118,7 @@ type Command struct {
 			UseEdgeTTS   bool   `json:"useEdgeTTS"`
 			EdgeTTSVoice string `json:"edgeTTSVoice"`
 		} `json:"tts,omitempty"`
-		Chat struct {
-			Stream       bool   `json:"stream"`
-			UseEdgeTTS   bool   `json:"useEdgeTTS"`
-			EdgeTTSVoice string `json:"edgeTTSVoice"`
-			UseCmd       bool   `json:"useCmd"`
-			Wait         bool   `json:"wait"`
-			EndFlag      string `json:"endFlag"`
-		}
-	} `json:"step"`
+	} `json:"step,omitempty"`
 }
 type Serve struct {
 	LastTimestamp  int64
@@ -123,9 +132,8 @@ type Serve struct {
 
 	device *miservice.DeviceData
 
-	assisant jarvis.Jarvis
-
-	inChat bool
+	inChat      bool // 是否在对话中
+	chatOptions *Command
 }
 
 func NewServe() *Serve {
@@ -167,7 +175,7 @@ func (s *Serve) pollLatestAsk() {
 		var resp *miservice.AskRecords
 		err = s.minaSrv.LastAskList(s.device.DeviceID, s.device.Hardware, 2, &resp)
 		if err != nil {
-			pterm.Error.Println(err)
+			pterm.Error.Println(err.Error())
 			continue
 		}
 		if resp == nil {
@@ -176,7 +184,7 @@ func (s *Serve) pollLatestAsk() {
 		var record *miservice.AskRecord
 		err = json.Unmarshal([]byte(resp.Data), &record)
 		if err != nil {
-			pterm.Error.Println(err)
+			pterm.Error.Println(err.Error())
 			continue
 		}
 		if len(record.Records) > 0 {
@@ -207,15 +215,16 @@ func (s *Serve) wakeup() error {
 }
 
 func (s *Serve) stop() error {
-	var (
+	/*var (
 		yes bool
 		err error
 	)
 	if yes, err = s.isPlaying(); yes {
 		_, err = s.minaSrv.PlayerPause(minaDeviceID)
 		return err
-	}
-	return nil
+	}*/
+	_, err := s.minaSrv.PlayerPause(minaDeviceID)
+	return err
 
 }
 
@@ -321,7 +330,7 @@ func (s *Serve) waitForTTSDone() {
 func (s *Serve) Run() error {
 	err := s.loadCommands() // 加载训练计划
 	if err != nil {
-		pterm.Error.Println(err)
+		pterm.Error.Println(err.Error())
 		return err
 	}
 	deviceId := minaDeviceID
@@ -338,96 +347,177 @@ func (s *Serve) Run() error {
 		record := <-s.records
 		pterm.Debug.Println("Latest Query: ", record.Query)
 		query := record.Query
-		command, match := lo.Find(s.commands, func(c *Command) bool { return strings.Contains(query, c.Keyword) })
-		if !match {
-			continue
-		}
-		if command.Mute {
-			err = s.stop()
-			if err != nil {
-				pterm.Error.Println(err)
+		if s.inChat {
+			if strings.Contains(query, s.chatOptions.Config.EndFlag) {
+				pterm.Debug.Println("End Chat")
+				s.inChat = false
+				waitMsg := "再见～"
+				if s.chatOptions.Config.UseEdgeTTS {
+					err = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, waitMsg, s.chatOptions.Config.Wait)
+				} else {
+					err = s.tts(s.chatOptions.Config.UseCmd, waitMsg, s.chatOptions.Config.Wait)
+				}
+				_ = s.stop()
 				continue
 			}
+			if s.chatOptions.Mute {
+				_ = s.stop()
+			} else {
+				s.waitForTTSDone()
+			}
+			waitMsg := "让我想想，请耐心等待哦～"
+			if s.chatOptions.Config.UseEdgeTTS {
+				err = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, waitMsg, s.chatOptions.Config.Wait)
+			} else {
+				err = s.tts(s.chatOptions.Config.UseCmd, waitMsg, s.chatOptions.Config.Wait)
+			}
+			if len(record.Answers) > 0 {
+				var str string
+				for _, a := range record.Answers {
+					str += a.Tts.Text
+				}
+				pterm.Debug.Println("xiaoai's answer: ", str)
+			} else {
+				pterm.Debug.Println("xiaoai's answer: ", "No Answer")
+			}
+			gpt := jarvis.NewChatGPT()
+			if s.chatOptions.Config.Stream {
+				gpt.StreamMessage = make(chan string)
+				gpt.InStream = true
+				go func() {
+					err = gpt.AskStream(query)
+					if err != nil {
+						pterm.Error.Println(err.Error())
+					}
+				}()
+				reply := util.SplitSentences(gpt.StreamMessage)
+				for {
+					sentence, ok := <-reply
+					if !ok {
+						gpt.InStream = false
+						break
+					}
+					pterm.Debug.Println("jarvis's answer: ", sentence)
+					if s.chatOptions.Config.UseEdgeTTS {
+						err = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, sentence, s.chatOptions.Config.Wait)
+					} else {
+						err = s.tts(s.chatOptions.Config.UseCmd, sentence, s.chatOptions.Config.Wait)
+					}
+				}
+			} else {
+				var sentence string
+				sentence, err = gpt.Ask(query)
+				if err != nil {
+					pterm.Error.Println(err.Error())
+				}
+				if s.chatOptions.Config.UseEdgeTTS {
+					err = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, sentence, s.chatOptions.Config.Wait)
+				} else {
+					err = s.tts(s.chatOptions.Config.UseCmd, sentence, s.chatOptions.Config.Wait)
+				}
+				pterm.Debug.Println("jarvis's answer: ", sentence)
+			}
+			pterm.Debug.Println("continue chat")
+			_ = s.wakeup()
 		} else {
-			s.waitForTTSDone()
-		}
-		for _, step := range command.Step {
-			switch step.Type {
-			case "tts":
-				pterm.Debug.Println("Start execute tts")
-				if step.TTS.UseEdgeTTS {
-					err = s.edgeTTS(step.TTS.EdgeTTSVoice, step.TTS.Out, step.TTS.Wait)
+			command, match := lo.Find(s.commands, func(c *Command) bool { return strings.Contains(query, c.Keyword) })
+			if !match {
+				continue
+			}
+			if command.Mute {
+				_ = s.stop()
+			} else {
+				s.waitForTTSDone()
+			}
+			if command.Type == "chat" {
+				pterm.Debug.Println("Start Chat")
+				s.inChat = true
+				s.chatOptions = command
+				waitMsg := "有什么可以帮您的吗？"
+				if s.chatOptions.Config.UseEdgeTTS {
+					err = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, waitMsg, s.chatOptions.Config.Wait)
 				} else {
-					err = s.tts(step.TTS.UseCmd, step.TTS.Out, step.TTS.Wait)
+					err = s.tts(s.chatOptions.Config.UseCmd, waitMsg, s.chatOptions.Config.Wait)
 				}
-				if err != nil {
-					pterm.Error.Println(err)
-				}
-
-			case "request":
-				pterm.Debug.Println("Start execute request")
-				if step.Request.Method == "" {
-					step.Request.Method = "GET"
-				}
-				if step.Request.URL == "" {
-					continue
-				}
-				client := req.C()
-				r := client.R()
-				if step.Request.Headers != "" {
-					var headers map[string]string
-					err = json.Unmarshal([]byte(step.Request.Headers), &headers)
-					if err != nil {
-						pterm.Error.Println(err)
-					}
-					req.SetHeaders(headers)
-				}
-				if step.Request.Data != "" {
-					var data map[string]interface{}
-					err = json.Unmarshal([]byte(step.Request.Data), &data)
-					if err != nil {
-						pterm.Error.Println(err)
-					}
-					req.SetBody(data)
-				}
-				var resp *req.Response
-				pterm.Info.Println(step.Request.Method + " " + step.Request.URL)
-				resp, err = r.Send(step.Request.Method, step.Request.URL)
-				if err != nil {
-					pterm.Error.Println(err)
-				} else {
-					if step.Request.Out != "" {
-						if strings.Contains(step.Request.Out, ".") {
-							value := gjson.Get(resp.String(), step.Request.Out)
-							message := value.String()
-							if step.TTS.UseEdgeTTS {
-								err = s.edgeTTS(step.Request.EdgeTTSVoice, step.Request.Out, step.Request.Wait)
-							} else {
-								err = s.tts(step.Request.UseCmd, message, step.Request.Wait)
-							}
+				_ = s.wakeup()
+				continue
+			} else {
+				for _, step := range command.Step {
+					switch step.Type {
+					case "tts":
+						pterm.Debug.Println("Start execute tts")
+						if step.TTS.UseEdgeTTS {
+							err = s.edgeTTS(step.TTS.EdgeTTSVoice, step.TTS.Out, step.TTS.Wait)
 						} else {
-							if step.Request.UseEdgeTTS {
-								err = s.edgeTTS(step.Request.EdgeTTSVoice, step.Request.Out, step.Request.Wait)
-							} else {
-								err = s.tts(step.Request.UseCmd, step.Request.Out, step.Request.Wait)
-							}
+							err = s.tts(step.TTS.UseCmd, step.TTS.Out, step.TTS.Wait)
 						}
 						if err != nil {
-							pterm.Error.Println(err)
+							pterm.Error.Println(err.Error())
+						}
+
+					case "request":
+						pterm.Debug.Println("Start execute request")
+						if step.Request.Method == "" {
+							step.Request.Method = "GET"
+						}
+						if step.Request.URL == "" {
+							continue
+						}
+						client := req.C()
+						r := client.R()
+						if step.Request.Headers != "" {
+							var headers map[string]string
+							err = json.Unmarshal([]byte(step.Request.Headers), &headers)
+							if err != nil {
+								pterm.Error.Println(err.Error())
+							}
+							req.SetHeaders(headers)
+						}
+						if step.Request.Data != "" {
+							var data map[string]interface{}
+							err = json.Unmarshal([]byte(step.Request.Data), &data)
+							if err != nil {
+								pterm.Error.Println(err.Error())
+							}
+							req.SetBody(data)
+						}
+						var resp *req.Response
+						pterm.Info.Println(step.Request.Method + " " + step.Request.URL)
+						resp, err = r.Send(step.Request.Method, step.Request.URL)
+						if err != nil {
+							pterm.Error.Println(err.Error())
+						} else {
+							if step.Request.Out != "" {
+								if strings.Contains(step.Request.Out, ".") {
+									value := gjson.Get(resp.String(), step.Request.Out)
+									message := value.String()
+									if step.TTS.UseEdgeTTS {
+										err = s.edgeTTS(step.Request.EdgeTTSVoice, step.Request.Out, step.Request.Wait)
+									} else {
+										err = s.tts(step.Request.UseCmd, message, step.Request.Wait)
+									}
+								} else {
+									if step.Request.UseEdgeTTS {
+										err = s.edgeTTS(step.Request.EdgeTTSVoice, step.Request.Out, step.Request.Wait)
+									} else {
+										err = s.tts(step.Request.UseCmd, step.Request.Out, step.Request.Wait)
+									}
+								}
+								if err != nil {
+									pterm.Error.Println(err.Error())
+								}
+							}
+						}
+					case "action":
+						pterm.Debug.Println("Start execute action")
+						err = s.Call(step.Action.Text, step.Action.Silent)
+						if err != nil {
+							pterm.Error.Println(err.Error())
 						}
 					}
 				}
-			case "action":
-				pterm.Debug.Println("Start execute action")
-				err = s.Call(step.Action.Text, step.Action.Silent)
-				if err != nil {
-					pterm.Error.Println(err)
-				}
-
-			case "chat":
-				s.assisant = jarvis.NewChatGPT()
-				//todo:完善
 			}
 		}
+
 	}
 }

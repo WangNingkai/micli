@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"micli/miservice"
+	"micli/pkg/miservice"
 )
 
 var (
