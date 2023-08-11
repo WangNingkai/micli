@@ -39,6 +39,7 @@ require (
 	github.com/quic-go/quic-go v0.37.3 // indirect
 	github.com/refraction-networking/utls v1.4.1 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/sashabaranov/go-openai v1.14.1 // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.8.2 // indirect

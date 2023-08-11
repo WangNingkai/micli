@@ -14,23 +14,23 @@
           "useCmd": false,
           "wait": true,
           "useEdgeTTS": false,
-          "edgeVoice": "zh-CN-XiaoxiaoNeural"
+          "edgeTTSVoice": "zh-CN-XiaoxiaoNeural"
         }
       }
     ]
   },
   {
-    "keyword": "谁最帅",
+    "keyword": "我是谁",
     "mute": true,
     "step": [
       {
         "type": "tts",
         "tts": {
-          "out": "你最帅",
+          "out": "你猜呀~",
           "useCmd": false,
           "wait": true,
-          "useEdgeTTS": false,
-          "edgeVoice": "zh-CN-XiaoxiaoNeural"
+          "useEdgeTTS": true,
+          "edgeTTSVoice": "zh-CN-XiaoxiaoNeural"
         }
       }
     ]
@@ -55,10 +55,12 @@
       {
         "type": "chat",
         "chat": {
-          "end": "关闭高级对话",
+          "endFlag": "关闭高级对话",
           "stream": true,
+          "useCmd": false,
+          "wait": true,
           "useEdgeTTS": false,
-          "edgeVoice": "zh-CN-XiaoxiaoNeural"
+          "edgeTTSVoice": "zh-CN-XiaoxiaoNeural"
         }
       }
     ]

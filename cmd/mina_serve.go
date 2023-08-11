@@ -10,6 +10,7 @@ import (
 	"github.com/tidwall/gjson"
 	"micli/conf"
 	"micli/miservice"
+	"micli/pkg/jarvis"
 	"micli/pkg/tts"
 	"micli/pkg/util"
 	"os"
@@ -93,13 +94,21 @@ type Command struct {
 			Text   string `json:"text"`
 			Silent bool   `json:"silent"`
 		} `json:"action,omitempty"`
-		Tts struct {
+		TTS struct {
 			Out          string `json:"out"`
 			UseCmd       bool   `json:"useCmd"`
 			Wait         bool   `json:"wait"`
 			UseEdgeTTS   bool   `json:"useEdgeTTS"`
 			EdgeTTSVoice string `json:"edgeTTSVoice"`
 		} `json:"tts,omitempty"`
+		Chat struct {
+			Stream       bool   `json:"stream"`
+			UseEdgeTTS   bool   `json:"useEdgeTTS"`
+			EdgeTTSVoice string `json:"edgeTTSVoice"`
+			UseCmd       bool   `json:"useCmd"`
+			Wait         bool   `json:"wait"`
+			EndFlag      string `json:"endFlag"`
+		}
 	} `json:"step"`
 }
 type Serve struct {
@@ -113,6 +122,10 @@ type Serve struct {
 	miioSrv *miservice.IOService
 
 	device *miservice.DeviceData
+
+	assisant jarvis.Jarvis
+
+	inChat bool
 }
 
 func NewServe() *Serve {
@@ -342,10 +355,10 @@ func (s *Serve) Run() error {
 			switch step.Type {
 			case "tts":
 				pterm.Debug.Println("Start execute tts")
-				if step.Tts.UseEdgeTTS {
-					err = s.edgeTTS(step.Tts.EdgeTTSVoice, step.Tts.Out, step.Tts.Wait)
+				if step.TTS.UseEdgeTTS {
+					err = s.edgeTTS(step.TTS.EdgeTTSVoice, step.TTS.Out, step.TTS.Wait)
 				} else {
-					err = s.tts(step.Tts.UseCmd, step.Tts.Out, step.Tts.Wait)
+					err = s.tts(step.TTS.UseCmd, step.TTS.Out, step.TTS.Wait)
 				}
 				if err != nil {
 					pterm.Error.Println(err)
@@ -387,7 +400,7 @@ func (s *Serve) Run() error {
 						if strings.Contains(step.Request.Out, ".") {
 							value := gjson.Get(resp.String(), step.Request.Out)
 							message := value.String()
-							if step.Tts.UseEdgeTTS {
+							if step.TTS.UseEdgeTTS {
 								err = s.edgeTTS(step.Request.EdgeTTSVoice, step.Request.Out, step.Request.Wait)
 							} else {
 								err = s.tts(step.Request.UseCmd, message, step.Request.Wait)
@@ -410,6 +423,10 @@ func (s *Serve) Run() error {
 				if err != nil {
 					pterm.Error.Println(err)
 				}
+
+			case "chat":
+				s.assisant = jarvis.NewChatGPT()
+				//todo:完善
 			}
 		}
 	}

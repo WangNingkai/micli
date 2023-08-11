@@ -49,6 +49,7 @@ func init() {
 	rootCmd.AddCommand(miotRawCmd)
 	rootCmd.AddCommand(miioRawCmd)
 	rootCmd.AddCommand(setDidCmd)
+	rootCmd.AddCommand(TestCmd)
 }
 
 func initConf() {
