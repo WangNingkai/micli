@@ -65,7 +65,7 @@ var (
 				}
 			}
 			var specs *miservice.MiotSpecInstancesData
-			specs, err = srv.MiotSpec(deviceModel)
+			specs, err = ioSrv.MiotSpec(deviceModel)
 			if err != nil {
 				pterm.Error.Println(err.Error())
 				return
@@ -115,13 +115,13 @@ var (
 			}
 			var data []interface{}
 			if miot {
-				data, err = srv.MiotGetProps(did, props)
+				data, err = ioSrv.MiotGetProps(did, props)
 			} else {
 				/*var _props []string
 				for _, prop := range props {
 					_props = append(_props, prop[0].(string))
 				}
-				res, err = srv.HomeGetProps(did, _props)*/
+				res, err = ioSrv.HomeGetProps(did, _props)*/
 				err = errors.New("device not support miot")
 			}
 

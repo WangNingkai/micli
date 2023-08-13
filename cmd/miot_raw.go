@@ -21,7 +21,7 @@ var (
 				if err = json.Unmarshal([]byte(args[1]), &params); err != nil {
 					return
 				}
-				res, err = srv.MiotRequest(uri, params)
+				res, err = ioSrv.MiotRequest(uri, params)
 			}
 			handleResult(res, err)
 		},

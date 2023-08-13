@@ -15,7 +15,7 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 var (
 	ms           *miservice.Service
-	srv          *miservice.IOService
+	ioSrv        *miservice.IOService
 	minaSrv      *miservice.MinaService
 	did          string
 	minaDeviceID string
@@ -75,7 +75,7 @@ func initConf() {
 		conf.Cfg.Section("account").Key("REGION").MustString("cn"),
 		miservice.NewTokenStore(tokenPath),
 	)
-	srv = miservice.NewIOService(ms)
+	ioSrv = miservice.NewIOService(ms)
 	minaSrv = miservice.NewMinaService(ms)
 }
 

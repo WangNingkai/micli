@@ -140,7 +140,7 @@ func NewServe() *Serve {
 	return &Serve{
 		records: make(chan *miservice.AskRecordItem),
 		minaSrv: minaSrv,
-		miioSrv: srv,
+		miioSrv: ioSrv,
 	}
 }
 

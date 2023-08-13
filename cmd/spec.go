@@ -45,7 +45,7 @@ var (
 				keyword = deviceMap[choice]
 			}
 			var data *miservice.MiotSpecInstancesData
-			data, err = srv.MiotSpec(keyword)
+			data, err = ioSrv.MiotSpec(keyword)
 			if err != nil {
 				pterm.Error.Println(err.Error())
 				return

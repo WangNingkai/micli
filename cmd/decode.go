@@ -29,9 +29,9 @@ var (
 				arg3 = args[3]
 			}
 			if arg3 == "gzip" {
-				res, err = srv.MiotDecode(arg0, arg1, arg2, true)
+				res, err = ioSrv.MiotDecode(arg0, arg1, arg2, true)
 			}
-			res, err = srv.MiotDecode(arg0, arg1, arg2, false)
+			res, err = ioSrv.MiotDecode(arg0, arg1, arg2, false)
 
 			handleResult(res, err)
 		},

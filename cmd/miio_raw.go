@@ -21,7 +21,7 @@ var (
 				if err = json.Unmarshal([]byte(args[1]), &params); err != nil {
 					return
 				}
-				res, err = srv.Request(uri, params)
+				res, err = ioSrv.Request(uri, params)
 			}
 			handleResult(res, err)
 		},

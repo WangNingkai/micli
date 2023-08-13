@@ -90,7 +90,7 @@ func init() {
 }
 
 func getDeviceListFromRemote() (res []*miservice.DeviceInfo, err error) {
-	res, err = srv.DeviceList()
+	res, err = ioSrv.DeviceList()
 	return
 }
 

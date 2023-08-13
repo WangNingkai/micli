@@ -77,7 +77,7 @@ var (
 
 			if miot {
 				var data []float64
-				data, err = srv.MiotSetProps(did, props)
+				data, err = ioSrv.MiotSetProps(did, props)
 				arr := lo.Filter(data, func(item float64, index int) bool { return item != 0 })
 				if len(arr) > 0 {
 					err = errors.New("set failed")
@@ -88,7 +88,7 @@ var (
 				for _, prop := range props {
 					_props[prop[0].(string)] = prop[1]
 				}
-				res, err = srv.HomeSetProps(did, _props)*/
+				res, err = ioSrv.HomeSetProps(did, _props)*/
 				err = errors.New("device not support miot")
 			}
 
