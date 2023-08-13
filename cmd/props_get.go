@@ -92,8 +92,18 @@ var (
 				if util.IsDigit(siid) && util.IsDigit(iid) {
 					s, _ := strconv.Atoi(siid)
 					_service, _ := lo.Find(specs.Services, func(srv *miservice.MiotSpecService) bool { return srv.Iid == s })
+					if _service == nil {
+						err = fmt.Errorf("service not found")
+						pterm.Error.Println(err.Error())
+						return
+					}
 					i, _ := strconv.Atoi(iid)
 					_prop, _ := lo.Find(_service.Properties, func(pr *miservice.MiotSpecProperty) bool { return pr.Iid == i })
+					if _prop == nil {
+						err = fmt.Errorf("property not found")
+						pterm.Error.Println(err.Error())
+						return
+					}
 					prop = []interface{}{s, i}
 					desc = []interface{}{_service.Description, _prop.Description}
 				} else {

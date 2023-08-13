@@ -41,7 +41,9 @@ func InitDefault() {
 		)
 		// 创建初始配置文件
 		f, err = util.CreatNestedFile(ConfPath)
-		defer f.Close()
+		defer func(f *os.File) {
+			_ = f.Close()
+		}(f)
 		if err != nil {
 			pterm.Error.Printf("Fail to create config file: %v", err)
 			os.Exit(0)
@@ -72,7 +74,9 @@ func Reset() {
 	} else {
 		f, err = os.OpenFile(ConfPath, os.O_WRONLY|os.O_TRUNC, 0600)
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		_ = f.Close()
+	}(f)
 
 	// 写入配置文件
 	_, err = f.WriteString(DefaultConf)

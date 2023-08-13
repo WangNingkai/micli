@@ -156,7 +156,9 @@ func (s *Serve) loadCommands() (err error) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		_ = f.Close()
+	}(f)
 	j := json.NewDecoder(f)
 	var commands []*Command
 	err = j.Decode(&commands)

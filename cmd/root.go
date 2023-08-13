@@ -7,16 +7,16 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/ini.v1"
 	"micli/conf"
-	miservice2 "micli/pkg/miservice"
+	"micli/pkg/miservice"
 	"os"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 var (
-	miAccount    *miservice2.Account
-	srv          *miservice2.IOService
-	minaSrv      *miservice2.MinaService
+	ms           *miservice.Service
+	srv          *miservice.IOService
+	minaSrv      *miservice.MinaService
 	did          string
 	minaDeviceID string
 	rootCmd      = &cobra.Command{
@@ -69,14 +69,14 @@ func initConf() {
 		os.Exit(0)
 	}
 	tokenPath := fmt.Sprintf("%s/.mi.token", os.Getenv("HOME"))
-	miAccount = miservice2.NewAccount(
+	ms = miservice.New(
 		conf.Cfg.Section("account").Key("MI_USER").MustString(""),
 		conf.Cfg.Section("account").Key("MI_PASS").MustString(""),
 		conf.Cfg.Section("account").Key("REGION").MustString("cn"),
-		miservice2.NewTokenStore(tokenPath),
+		miservice.NewTokenStore(tokenPath),
 	)
-	srv = miservice2.NewIOService(miAccount)
-	minaSrv = miservice2.NewMinaService(miAccount)
+	srv = miservice.NewIOService(ms)
+	minaSrv = miservice.NewMinaService(ms)
 }
 
 func handleResult(res interface{}, err error) {

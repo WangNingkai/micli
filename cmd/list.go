@@ -111,7 +111,9 @@ func getDeviceListFromLocal() (list []*miservice.DeviceInfo, err error) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		_ = f.Close()
+	}(f)
 	err = json.NewDecoder(f).Decode(&list)
 	if err != nil {
 		return
@@ -125,7 +127,9 @@ func writeIntoLocal(list []*miservice.DeviceInfo) (err error) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		_ = f.Close()
+	}(f)
 	err = json.NewEncoder(f).Encode(list)
 	if err != nil {
 		return

@@ -8,8 +8,12 @@ import (
 	"time"
 )
 
+const (
+	MinaSid = "micoapi"
+)
+
 type MinaService struct {
-	account *Account
+	service *Service
 }
 
 type DeviceData struct {
@@ -101,13 +105,13 @@ type AskRecord struct {
 	NextEndTime int64            `json:"nextEndTime"`
 }
 
-func NewMinaService(account *Account) *MinaService {
+func NewMinaService(service *Service) *MinaService {
 	return &MinaService{
-		account: account,
+		service: service,
 	}
 }
 
-func (mina *MinaService) Request(uri string, data url.Values, out any) error {
+func (s *MinaService) Request(uri string, data url.Values, out any) error {
 	requestId := fmt.Sprintf("app_ios_%s", util.GetRandom(30))
 	if data != nil {
 		data["requestId"] = []string{requestId}
@@ -119,19 +123,19 @@ func (mina *MinaService) Request(uri string, data url.Values, out any) error {
 		"User-Agent": []string{"MiHome/6.0.103 (com.xiaomi.mihome; build:6.0.103.1; iOS 14.4.0) Alamofire/6.0.103 MICO/iOSApp/appStore/6.0.103"},
 	}
 
-	return mina.account.Request("micoapi", fmt.Sprintf("https://api2.mina.mi.com%s", uri), data, nil, headers, true, out)
+	return s.service.Request(MinaSid, fmt.Sprintf("https://api2.mina.mi.com%s", uri), data, nil, headers, true, out)
 }
 
-func (mina *MinaService) DeviceList(master int) (devices []*DeviceData, err error) {
+func (s *MinaService) DeviceList(master int) (devices []*DeviceData, err error) {
 	var res *Devices
-	err = mina.Request(fmt.Sprintf("/admin/v2/device_list?master=%d", master), nil, &res)
+	err = s.Request(fmt.Sprintf("/admin/v2/device_list?master=%d", master), nil, &res)
 	if err != nil {
 		return nil, err
 	}
 	return res.Data, nil
 }
 
-func (mina *MinaService) LastAskList(deviceId string, hardware string, limit, out any) error {
+func (s *MinaService) LastAskList(deviceId string, hardware string, limit, out any) error {
 	headers := http.Header{
 		"User-Agent": []string{"MiHome/8.6.210 (com.xiaomi.mihome; build:8.6.210.385; iOS 16.6.0) Alamofire/8.6.210 MICO/iOSApp/appStore/8.6.210"},
 	}
@@ -139,10 +143,10 @@ func (mina *MinaService) LastAskList(deviceId string, hardware string, limit, ou
 		cookies["deviceId"] = deviceId
 		return nil
 	}
-	return mina.account.Request("micoapi", fmt.Sprintf("https://userprofile.mina.mi.com/device_profile/v2/conversation?source=dialogu&hardware=%s&timestamp=%d&limit=%d", hardware, time.Now().UnixNano(), limit), nil, prepareData, headers, true, out)
+	return s.service.Request(MinaSid, fmt.Sprintf("https://userprofile.mina.mi.com/device_profile/v2/conversation?source=dialogu&hardware=%s&timestamp=%d&limit=%d", hardware, time.Now().UnixNano(), limit), nil, prepareData, headers, true, out)
 }
 
-func (mina *MinaService) UbusRequest(deviceId, method, path string, message map[string]interface{}, res any) error {
+func (s *MinaService) UbusRequest(deviceId, method, path string, message map[string]interface{}, res any) error {
 	messageJSON, _ := json.Marshal(message)
 	data := url.Values{
 		"deviceId": []string{deviceId},
@@ -151,61 +155,61 @@ func (mina *MinaService) UbusRequest(deviceId, method, path string, message map[
 		"path":     []string{path},
 	}
 
-	err := mina.Request("/remote/ubus", data, res)
+	err := s.Request("/remote/ubus", data, res)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (mina *MinaService) TextToSpeech(deviceId, text string) (map[string]interface{}, error) {
+func (s *MinaService) TextToSpeech(deviceId, text string) (map[string]interface{}, error) {
 	var res map[string]interface{}
-	err := mina.UbusRequest(deviceId, "text_to_speech", "mibrain", map[string]interface{}{"text": text}, &res)
+	err := s.UbusRequest(deviceId, "text_to_speech", "mibrain", map[string]interface{}{"text": text}, &res)
 	return res, err
 }
 
-func (mina *MinaService) PlayerSetVolume(deviceId string, volume int) (map[string]interface{}, error) {
+func (s *MinaService) PlayerSetVolume(deviceId string, volume int) (map[string]interface{}, error) {
 	var res map[string]interface{}
-	err := mina.UbusRequest(deviceId, "player_set_volume", "mediaplayer", map[string]interface{}{"volume": volume, "media": "app_ios"}, &res)
+	err := s.UbusRequest(deviceId, "player_set_volume", "mediaplayer", map[string]interface{}{"volume": volume, "media": "app_ios"}, &res)
 	return res, err
 }
 
-func (mina *MinaService) PlayerPause(deviceId string) (map[string]interface{}, error) {
+func (s *MinaService) PlayerPause(deviceId string) (map[string]interface{}, error) {
 	var res map[string]interface{}
-	err := mina.UbusRequest(deviceId, "player_play_operation", "mediaplayer", map[string]interface{}{"action": "pause", "media": "app_ios"}, &res)
+	err := s.UbusRequest(deviceId, "player_play_operation", "mediaplayer", map[string]interface{}{"action": "pause", "media": "app_ios"}, &res)
 	return res, err
 }
 
-func (mina *MinaService) PlayerPlay(deviceId string) (map[string]interface{}, error) {
+func (s *MinaService) PlayerPlay(deviceId string) (map[string]interface{}, error) {
 	var res map[string]interface{}
-	err := mina.UbusRequest(deviceId, "player_play_operation", "mediaplayer", map[string]interface{}{"action": "play", "media": "app_ios"}, &res)
+	err := s.UbusRequest(deviceId, "player_play_operation", "mediaplayer", map[string]interface{}{"action": "play", "media": "app_ios"}, &res)
 	return res, err
 }
 
-func (mina *MinaService) PlayerGetStatus(deviceId string) (
+func (s *MinaService) PlayerGetStatus(deviceId string) (
 	*PlayerStatus, error) {
 	var res PlayerStatus
-	err := mina.UbusRequest(deviceId, "player_get_play_status", "mediaplayer", map[string]interface{}{"media": "app_ios"}, &res)
+	err := s.UbusRequest(deviceId, "player_get_play_status", "mediaplayer", map[string]interface{}{"media": "app_ios"}, &res)
 	return &res, err
 }
 
-func (mina *MinaService) PlayByUrl(deviceId, url string) (map[string]interface{}, error) {
+func (s *MinaService) PlayByUrl(deviceId, url string) (map[string]interface{}, error) {
 	var res map[string]interface{}
-	err := mina.UbusRequest(deviceId, "player_play_url", "mediaplayer", map[string]interface{}{"url": url, "type": 1, "media": "app_ios"}, &res)
+	err := s.UbusRequest(deviceId, "player_play_url", "mediaplayer", map[string]interface{}{"url": url, "type": 1, "media": "app_ios"}, &res)
 	return res, err
 }
 
-func (mina *MinaService) SendMessage(devices []*DeviceData, devNo int, message string, volume *int) (bool, error) {
+func (s *MinaService) SendMessage(devices []*DeviceData, devNo int, message string, volume *int) (bool, error) {
 	result := false
 	for i, device := range devices {
 		if devNo == -1 || devNo != i+1 || device.Capabilities.Yunduantts != 0 {
 			deviceId := device.DeviceID
 			if volume != nil {
-				res, err := mina.PlayerSetVolume(deviceId, *volume)
+				res, err := s.PlayerSetVolume(deviceId, *volume)
 				result = err == nil && res != nil
 			}
 			if message != "" {
-				res, err := mina.TextToSpeech(deviceId, message)
+				res, err := s.TextToSpeech(deviceId, message)
 				result = err == nil && res != nil
 			}
 			if devNo != -1 || !result {

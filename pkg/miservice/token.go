@@ -5,7 +5,7 @@ import (
 )
 
 type SidToken struct {
-	Ssecurity    string `json:"ssecurity"`
+	SSecurity    string `json:"ssecurity"`
 	ServiceToken string `json:"service_token"`
 }
 
@@ -67,17 +67,4 @@ func (mts *FileTokenStore) SaveToken(tokens *Tokens) (err error) {
 		}
 	}
 	return
-}
-
-type DummyTokenStore struct {
-	tokens *Tokens
-}
-
-func (d *DummyTokenStore) LoadToken() (*Tokens, error) {
-	return d.tokens, nil
-}
-
-func (d *DummyTokenStore) SaveToken(tokens *Tokens) error {
-	d.tokens = tokens
-	return nil
 }
