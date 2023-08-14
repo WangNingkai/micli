@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"micli/conf"
 	"micli/pkg/miservice"
+	"regexp"
 	"strconv"
 )
 
@@ -71,7 +72,16 @@ func operatePlayer(srv *miservice.MinaService, args []string) (res interface{}, 
 			})
 			err = pterm.DefaultBulletList.WithItems(items).Render()
 		case "play":
-			res, err = srv.PlayerPlay(deviceId)
+			if len(args) > 1 {
+				urlRegex := regexp.MustCompile(`^(http|https)://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(?:/[^/]*)*$`)
+				if !urlRegex.MatchString(args[1]) {
+					pterm.Error.Println("Invalid URL.")
+					return
+				}
+				res, err = srv.PlayByUrl(deviceId, args[1])
+			} else {
+				res, err = srv.PlayerPlay(deviceId)
+			}
 		case "pause":
 			res, err = srv.PlayerPause(deviceId)
 		case "volume":

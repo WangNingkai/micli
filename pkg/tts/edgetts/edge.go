@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/imroc/req/v3"
 	"github.com/pterm/pterm"
 	uuid "github.com/satori/go.uuid"
 	"math/rand"
@@ -16,6 +17,7 @@ import (
 
 const (
 	edgeWssUrl         = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=`
+	voiceListUrl       = "https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4"
 	NormalSsmlTemplate = `
 <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">
     <voice name="{voiceName}">
@@ -39,6 +41,20 @@ var (
 		//"182.61.148.24", 广东百度云
 	}
 )
+
+type Voice struct {
+	Name           string `json:"Name"`
+	ShortName      string `json:"ShortName"`
+	Gender         string `json:"Gender"`
+	Locale         string `json:"Locale"`
+	SuggestedCodec string `json:"SuggestedCodec"`
+	FriendlyName   string `json:"FriendlyName"`
+	Status         string `json:"Status"`
+	VoiceTag       struct {
+		ContentCategories  []string `json:"ContentCategories"`
+		VoicePersonalities []string `json:"VoicePersonalities"`
+	} `json:"VoiceTag"`
+}
 
 type EdgeTTS struct {
 	DnsLookupEnabled bool // 使用DNS解析，而不是北京微软云节点。
@@ -252,6 +268,13 @@ func (t *EdgeTTS) TextToMp3(text string, voice string, filePath string) error {
 		return err
 	}
 	return nil
+}
+
+func (t *EdgeTTS) GetVoiceList() (voiceList []*Voice, err error) {
+	client := req.C()
+	r := client.R()
+	_, err = r.SetSuccessResult(&voiceList).Get(voiceListUrl)
+	return
 }
 
 func CreateSSML(text, voiceName string) string {

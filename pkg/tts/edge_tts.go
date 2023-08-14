@@ -32,3 +32,11 @@ func TextToMp3(text string, voice string) (string, error) {
 	}
 	return fp, nil
 }
+
+func LoadVoiceList() ([]*edgetts.Voice, error) {
+	tts := edgetts.EdgeTTS{}
+	var err error
+	var list []*edgetts.Voice
+	list, err = tts.GetVoiceList()
+	return list, err
+}
