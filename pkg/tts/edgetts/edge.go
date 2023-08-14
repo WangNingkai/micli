@@ -16,27 +16,46 @@ import (
 
 const (
 	edgeWssUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=`
+	//voiceUrl           = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4`
+	NormalSsmlTemplate = `
+<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">
+    <voice name="{voiceName}">
+      <prosody rate="0%" pitch="0%">
+          {text}
+      </prosody >
+    </voice >
+</speak >`
+	StyleSsmlTemplate = `
+<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">
+    <voice name="{voiceName}">
+        <mstts:express-as style="{style}">
+            <prosody rate="0%" pitch="0%">{text}</prosody>
+        </mstts:express-as>
+    </voice>
+</speak>`
+	voiceFormat = "audio-24khz-48kbitrate-mono-mp3"
 )
 
-var edgeChinaIpList = []string{
-	// 北京微软云
-	"202.89.233.100",
-	"202.89.233.101",
-	"202.89.233.102",
-	"202.89.233.103",
-	"202.89.233.104",
+var (
+	edgeChinaIpList = []string{
+		// 北京微软云
+		"202.89.233.100",
+		"202.89.233.101",
+		"202.89.233.102",
+		"202.89.233.103",
+		"202.89.233.104",
 
-	//"182.61.148.24", 广东百度云
-}
-
-func getUUID() string {
-	return uuid.NewV4().String()
-}
-
-func getISOTime() string {
-	T := time.Now().String()
-	return T[:23][:10] + "T" + T[:23][11:] + "Z"
-}
+		//"182.61.148.24", 广东百度云
+	}
+	//EdgeTTSDict = map[string]string{
+	//	"用英语": "en-US-AriaNeural",
+	//	"用日语": "ja-JP-NanamiNeural",
+	//	"用法语": "fr-BE-CharlineNeural",
+	//	"用韩语": "ko-KR-SunHiNeural",
+	//	"用德语": "de-AT-JonasNeural",
+	//	//add more here
+	//}
+)
 
 type EdgeTTS struct {
 	DnsLookupEnabled bool // 使用DNS解析，而不是北京微软云节点。
@@ -60,11 +79,9 @@ func (t *EdgeTTS) NewConn() error {
 	if t.DialTimeout == 0 {
 		t.DialTimeout = time.Second * 3
 	}
-
 	dl := websocket.Dialer{
 		EnableCompression: true,
 	}
-
 	if !t.DnsLookupEnabled {
 		dialer := &net.Dialer{}
 		dl.NetDial = func(network, addr string) (net.Conn, error) {
@@ -76,12 +93,10 @@ func (t *EdgeTTS) NewConn() error {
 			return dialer.Dial(network, addr)
 		}
 	}
-
 	header := http.Header{}
 	header.Set("Accept-Encoding", "gzip, deflate, br")
 	header.Set("Origin", "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold")
 	header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.66 Safari/537.36 Edg/103.0.1264.44")
-
 	var ctx context.Context
 	ctx, t.dialContextCancel = context.WithTimeout(context.Background(), t.DialTimeout)
 	defer func() {
@@ -131,7 +146,6 @@ func (t *EdgeTTS) GetAudio(ssml, format string) (audioData []byte, err error) {
 			return nil, err
 		}
 	}
-
 	running := true
 	defer func() { running = false }()
 	var finished = make(chan bool)
@@ -241,41 +255,8 @@ func (t *EdgeTTS) sendSsmlMessage(ssml string) error {
 	return nil
 }
 
-const NormalSsmlTemplate = `
-<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">
-    <voice name="{voiceName}">
-      <prosody rate="0%" pitch="0%">
-          {text}
-      </prosody >
-    </voice >
-</speak >`
-
-const StyleSsmlTemplate = `
-<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">
-    <voice name="{voiceName}">
-        <mstts:express-as style="{style}">
-            <prosody rate="0%" pitch="0%">{text}</prosody>
-        </mstts:express-as>
-    </voice>
-</speak>`
-
-const voiceFormat = "audio-24khz-48kbitrate-mono-mp3"
-
-func CreateSSML(text, voiceName string) string {
-	r := strings.ReplaceAll(NormalSsmlTemplate, "{text}", text)
-	r = strings.ReplaceAll(r, "{voiceName}", voiceName)
-	return r
-}
-
-func CreateStyleSSML(text, voiceName, style string) string {
-	r := strings.ReplaceAll(StyleSsmlTemplate, "{text}", text)
-	r = strings.ReplaceAll(r, "{style}", style)
-	r = strings.ReplaceAll(r, "{voiceName}", voiceName)
-	return r
-}
-
-func (t *EdgeTTS) TextToMp3(text string, ttsLang string, filePath string) error {
-	ssml := CreateSSML(text, ttsLang)
+func (t *EdgeTTS) TextToMp3(text string, voice string, filePath string) error {
+	ssml := CreateSSML(text, voice)
 	pterm.Debug.Println(ssml)
 	b, err := t.GetAudio(ssml, voiceFormat)
 	if err != nil {
@@ -290,11 +271,24 @@ func (t *EdgeTTS) TextToMp3(text string, ttsLang string, filePath string) error 
 	return nil
 }
 
-var EdgeTtsDict = map[string]string{
-	"用英语": "en-US-AriaNeural",
-	"用日语": "ja-JP-NanamiNeural",
-	"用法语": "fr-BE-CharlineNeural",
-	"用韩语": "ko-KR-SunHiNeural",
-	"用德语": "de-AT-JonasNeural",
-	//add more here
+func CreateSSML(text, voiceName string) string {
+	r := strings.ReplaceAll(NormalSsmlTemplate, "{text}", text)
+	r = strings.ReplaceAll(r, "{voiceName}", voiceName)
+	return r
+}
+
+func CreateSSMLWithStyle(text, voiceName, style string) string {
+	r := strings.ReplaceAll(StyleSsmlTemplate, "{text}", text)
+	r = strings.ReplaceAll(r, "{style}", style)
+	r = strings.ReplaceAll(r, "{voiceName}", voiceName)
+	return r
+}
+
+func getUUID() string {
+	return uuid.NewV4().String()
+}
+
+func getISOTime() string {
+	T := time.Now().String()
+	return T[:23][:10] + "T" + T[:23][11:] + "Z"
 }

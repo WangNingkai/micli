@@ -11,11 +11,13 @@ import (
 
 const voiceFormat = "audio-24khz-48kbitrate-mono-mp3"
 
-func TextToMp3(text string, ttsLang string) (string, error) {
-	ttsEdge := edgetts.EdgeTTS{}
-	ssml := edgetts.CreateSSML(text, ttsLang)
+func TextToMp3(text string, voice string) (string, error) {
+	tts := edgetts.EdgeTTS{
+		DnsLookupEnabled: true,
+	}
+	ssml := edgetts.CreateSSML(text, voice)
 	//pterm.Debug.Println(ssml)
-	b, err := ttsEdge.GetAudio(ssml, voiceFormat)
+	b, err := tts.GetAudio(ssml, voiceFormat)
 	if err != nil {
 		pterm.Error.Printf("Error: %v\n", err)
 		return "", err
