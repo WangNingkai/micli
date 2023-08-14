@@ -46,14 +46,6 @@ var (
 		"L09B": {"7-3", "7-1", "7-4"},
 		// add more here
 	}
-	EdgeTtsDict = map[string]string{
-		"用英语": "en-US-AriaNeural",
-		"用日语": "ja-JP-NanamiNeural",
-		"用法语": "fr-BE-CharlineNeural",
-		"用韩语": "ko-KR-SunHiNeural",
-		"用德语": "de-AT-JonasNeural",
-		//add more here
-	}
 	minaServeCmd = &cobra.Command{
 		Use:   "serve",
 		Short: "Hack xiaoai Project",
@@ -342,6 +334,7 @@ func (s *Serve) Run() error {
 	var device *miservice.DeviceData
 	device, err = chooseMinaDeviceDetail(s.minaSrv, deviceId)
 	s.device = device
+	s.inChat = false
 	pterm.Info.Println("Start Listen Device: " + device.Name)
 	s.LastTimestamp = time.Now().UnixMilli()
 	go s.pollLatestAsk()
@@ -350,28 +343,31 @@ func (s *Serve) Run() error {
 		pterm.Debug.Println("Latest Query: ", record.Query)
 		query := record.Query
 		if s.inChat {
-			if strings.Contains(query, s.chatOptions.Config.EndFlag) {
-				pterm.Debug.Println("End Chat")
-				s.inChat = false
-				waitMsg := "再见～"
-				if s.chatOptions.Config.UseEdgeTTS {
-					err = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, waitMsg, s.chatOptions.Config.Wait)
-				} else {
-					err = s.tts(s.chatOptions.Config.UseCmd, waitMsg, s.chatOptions.Config.Wait)
-				}
-				_ = s.stop()
-				continue
-			}
 			if s.chatOptions.Mute {
 				_ = s.stop()
 			} else {
 				s.waitForTTSDone()
 			}
+			if strings.Contains(query, s.chatOptions.Config.EndFlag) {
+				pterm.Debug.Println("End Chat")
+				s.inChat = false
+				waitMsg := "再见～"
+				if s.chatOptions.Config.UseEdgeTTS {
+					_ = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, waitMsg, s.chatOptions.Config.Wait)
+				} else {
+					_ = s.tts(s.chatOptions.Config.UseCmd, waitMsg, s.chatOptions.Config.Wait)
+				}
+				if err != nil {
+					pterm.Error.Println(err.Error())
+				}
+				_ = s.stop()
+				continue
+			}
 			waitMsg := "让我想想，请耐心等待哦～"
 			if s.chatOptions.Config.UseEdgeTTS {
-				err = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, waitMsg, s.chatOptions.Config.Wait)
+				_ = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, waitMsg, s.chatOptions.Config.Wait)
 			} else {
-				err = s.tts(s.chatOptions.Config.UseCmd, waitMsg, s.chatOptions.Config.Wait)
+				_ = s.tts(s.chatOptions.Config.UseCmd, waitMsg, s.chatOptions.Config.Wait)
 			}
 			if len(record.Answers) > 0 {
 				var str string
@@ -401,9 +397,9 @@ func (s *Serve) Run() error {
 					}
 					pterm.Debug.Println("jarvis's answer: ", sentence)
 					if s.chatOptions.Config.UseEdgeTTS {
-						err = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, sentence, s.chatOptions.Config.Wait)
+						_ = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, sentence, s.chatOptions.Config.Wait)
 					} else {
-						err = s.tts(s.chatOptions.Config.UseCmd, sentence, s.chatOptions.Config.Wait)
+						_ = s.tts(s.chatOptions.Config.UseCmd, sentence, s.chatOptions.Config.Wait)
 					}
 				}
 			} else {
@@ -413,14 +409,15 @@ func (s *Serve) Run() error {
 					pterm.Error.Println(err.Error())
 				}
 				if s.chatOptions.Config.UseEdgeTTS {
-					err = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, sentence, s.chatOptions.Config.Wait)
+					_ = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, sentence, s.chatOptions.Config.Wait)
 				} else {
-					err = s.tts(s.chatOptions.Config.UseCmd, sentence, s.chatOptions.Config.Wait)
+					_ = s.tts(s.chatOptions.Config.UseCmd, sentence, s.chatOptions.Config.Wait)
 				}
 				pterm.Debug.Println("jarvis's answer: ", sentence)
 			}
 			pterm.Debug.Println("continue chat")
 			_ = s.wakeup()
+			continue
 		} else {
 			command, match := lo.Find(s.commands, func(c *Command) bool { return strings.Contains(query, c.Keyword) })
 			if !match {
@@ -437,9 +434,9 @@ func (s *Serve) Run() error {
 				s.chatOptions = command
 				waitMsg := "有什么可以帮您的吗？"
 				if s.chatOptions.Config.UseEdgeTTS {
-					err = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, waitMsg, s.chatOptions.Config.Wait)
+					_ = s.edgeTTS(s.chatOptions.Config.EdgeTTSVoice, waitMsg, s.chatOptions.Config.Wait)
 				} else {
-					err = s.tts(s.chatOptions.Config.UseCmd, waitMsg, s.chatOptions.Config.Wait)
+					_ = s.tts(s.chatOptions.Config.UseCmd, waitMsg, s.chatOptions.Config.Wait)
 				}
 				_ = s.wakeup()
 				continue
@@ -456,7 +453,6 @@ func (s *Serve) Run() error {
 						if err != nil {
 							pterm.Error.Println(err.Error())
 						}
-
 					case "request":
 						pterm.Debug.Println("Start execute request")
 						if step.Request.Method == "" {
