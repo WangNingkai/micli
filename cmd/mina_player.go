@@ -3,10 +3,12 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"github.com/imroc/req/v3"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"micli/conf"
 	"micli/pkg/miservice"
+	"micli/pkg/tts"
 	"regexp"
 	"strconv"
 )
@@ -73,12 +75,24 @@ func operatePlayer(srv *miservice.MinaService, args []string) (res interface{}, 
 			err = pterm.DefaultBulletList.WithItems(items).Render()
 		case "play":
 			if len(args) > 1 {
+				var audioUrl = args[1]
 				urlRegex := regexp.MustCompile(`^(http|https)://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(?:/[^/]*)*$`)
-				if !urlRegex.MatchString(args[1]) {
-					pterm.Error.Println("Invalid URL.")
-					return
+				if !urlRegex.MatchString(audioUrl) {
+					// tts
+					var fp string
+					fp, err = tts.TextToMp3(args[1], "zh-CN-XiaoxiaoNeural")
+					if err != nil {
+						return
+					}
+					client := req.C()
+					r := client.R()
+					r.SetFile("file", fp)
+					var resp *req.Response
+					resp, err = r.Put(fmt.Sprintf("%s/edge_tts.mp3", conf.Cfg.Section("file").Key("TRANSFER_SH").MustString("https://transfer.sh")))
+					audioUrl = resp.String()
+					pterm.Debug.Println("tts url:", audioUrl)
 				}
-				res, err = srv.PlayByUrl(deviceId, args[1])
+				res, err = srv.PlayByUrl(deviceId, audioUrl)
 			} else {
 				res, err = srv.PlayerPlay(deviceId)
 			}
