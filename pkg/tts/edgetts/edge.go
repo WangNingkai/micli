@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	edgeWssUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=`
-	//voiceUrl           = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4`
+	edgeWssUrl         = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=`
 	NormalSsmlTemplate = `
 <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">
     <voice name="{voiceName}">
@@ -25,14 +24,6 @@ const (
       </prosody >
     </voice >
 </speak >`
-	StyleSsmlTemplate = `
-<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">
-    <voice name="{voiceName}">
-        <mstts:express-as style="{style}">
-            <prosody rate="0%" pitch="0%">{text}</prosody>
-        </mstts:express-as>
-    </voice>
-</speak>`
 	voiceFormat = "audio-24khz-48kbitrate-mono-mp3"
 )
 
@@ -47,14 +38,6 @@ var (
 
 		//"182.61.148.24", 广东百度云
 	}
-	//EdgeTTSDict = map[string]string{
-	//	"用英语": "en-US-AriaNeural",
-	//	"用日语": "ja-JP-NanamiNeural",
-	//	"用法语": "fr-BE-CharlineNeural",
-	//	"用韩语": "ko-KR-SunHiNeural",
-	//	"用德语": "de-AT-JonasNeural",
-	//	//add more here
-	//}
 )
 
 type EdgeTTS struct {
@@ -273,13 +256,6 @@ func (t *EdgeTTS) TextToMp3(text string, voice string, filePath string) error {
 
 func CreateSSML(text, voiceName string) string {
 	r := strings.ReplaceAll(NormalSsmlTemplate, "{text}", text)
-	r = strings.ReplaceAll(r, "{voiceName}", voiceName)
-	return r
-}
-
-func CreateSSMLWithStyle(text, voiceName, style string) string {
-	r := strings.ReplaceAll(StyleSsmlTemplate, "{text}", text)
-	r = strings.ReplaceAll(r, "{style}", style)
 	r = strings.ReplaceAll(r, "{voiceName}", voiceName)
 	return r
 }
