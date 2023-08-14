@@ -61,12 +61,12 @@ func operatePlayer(srv *miservice.MinaService, args []string) (res interface{}, 
 			})
 			items = append(items, pterm.BulletListItem{
 				Level:  1,
-				Text:   fmt.Sprintf("Status: %d", dataInfo.Status),
+				Text:   fmt.Sprintf("Status: %s", pterm.Green(dataInfo.Status)),
 				Bullet: ">",
 			})
 			items = append(items, pterm.BulletListItem{
 				Level:  1,
-				Text:   fmt.Sprintf("Volume: %d", dataInfo.Volume),
+				Text:   fmt.Sprintf("Volume: %s", pterm.Green(dataInfo.Volume)),
 				Bullet: ">",
 			})
 			err = pterm.DefaultBulletList.WithItems(items).Render()
