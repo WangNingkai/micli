@@ -317,7 +317,7 @@ func (s *Serve) waitForTTSDone() {
 		if !isPlaying {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(200 * time.Microsecond)
 	}
 }
 
