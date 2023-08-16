@@ -29,5 +29,6 @@ func (a *App) RegisterRoutes() {
 			"message": "ok",
 		})
 	})
+	a.Use(middleware.NotFound())
 
 }

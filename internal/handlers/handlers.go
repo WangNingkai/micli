@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gin-gonic/gin"
 )
 
 // NotFound returns custom 404 page
-func NotFound(c *fiber.Ctx) error {
-	return c.JSON(fiber.Map{
+func NotFound(c *gin.Context) {
+	c.JSON(200, gin.H{
 		"code": 404,
 		"msg":  "Not Found",
 		"data": "",
