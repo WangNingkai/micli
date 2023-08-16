@@ -65,4 +65,5 @@ func init() {
 	ttsCmd.Flags().StringVarP(&text, "text", "t", "", "text(required)")
 	ttsCmd.Flags().StringVarP(&voice, "voice", "v", "", "voice")
 	_ = ttsCmd.MarkFlagRequired("text")
+	ttsCmd.Example = `  micli tts -t "你好，世界"`
 }

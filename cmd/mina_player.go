@@ -113,5 +113,5 @@ func operatePlayer(srv *miservice.MinaService, args []string) (res interface{}, 
 }
 
 func init() {
-	minaPlayerCmd.Example = "  mina player status \n  mina player play\n  mina player pause\n  mina player volume 50"
+	minaPlayerCmd.Example = "  mina player status \n  mina player play\n  mina player play https://transfer.sh/test.mp3 \n  mina player pause\n  mina player volume 50"
 }

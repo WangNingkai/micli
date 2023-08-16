@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
 	"micli/conf"
+	"micli/internal"
 	"micli/pkg/jarvis"
 	"micli/pkg/miservice"
 	"micli/pkg/tts"
@@ -53,13 +54,13 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			s := NewServe()
 			c := make(chan os.Signal)
-			signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT)
+			signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
 			go func() {
 				for sig := range c {
 					switch sig {
-					case syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT:
+					case syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt:
 						pterm.Success.Println("serve stopped.")
-						os.Exit(0)
+						s.Exit()
 					}
 				}
 			}()
@@ -112,15 +113,16 @@ type Command struct {
 		} `json:"tts,omitempty"`
 	} `json:"step,omitempty"`
 }
+
 type Serve struct {
+	minaSrv        *miservice.MinaService
+	miioSrv        *miservice.IOService
+	app            *internal.App
 	LastTimestamp  int64
 	InConversation bool
 
 	records  chan *miservice.AskRecordItem
 	commands []*Command
-
-	minaSrv *miservice.MinaService
-	miioSrv *miservice.IOService
 
 	device *miservice.DeviceData
 
@@ -322,7 +324,18 @@ func (s *Serve) waitForTTSDone() {
 }
 
 func (s *Serve) Run() error {
-	err := s.loadCommands() // 加载训练计划
+	var err error
+	go func() {
+		app := internal.NewApp(conf.Cfg.Section("app").Key("PORT").MustString(":8080"))
+		app.RegisterMiddlewares()
+		app.RegisterRoutes()
+		err = app.Run()
+		if err != nil {
+			pterm.Fatal.Println(err.Error())
+		}
+	}()
+
+	err = s.loadCommands() // 加载训练计划
 	if err != nil {
 		pterm.Error.Println(err.Error())
 		return err
@@ -518,4 +531,8 @@ func (s *Serve) Run() error {
 		}
 
 	}
+}
+
+func (s *Serve) Exit() {
+	os.Exit(0)
 }
