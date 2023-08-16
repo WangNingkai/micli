@@ -325,7 +325,7 @@ func (s *Serve) waitForTTSDone() {
 
 func (s *Serve) Run() error {
 	var err error
-	go func() {
+	/*go func() {
 		app := internal.NewApp(conf.Cfg.Section("app").Key("PORT").MustString(":8080"))
 		app.RegisterMiddlewares()
 		app.RegisterRoutes()
@@ -333,7 +333,7 @@ func (s *Serve) Run() error {
 		if err != nil {
 			pterm.Fatal.Println(err.Error())
 		}
-	}()
+	}()*/
 
 	err = s.loadCommands() // 加载训练计划
 	if err != nil {
