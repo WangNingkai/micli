@@ -7,7 +7,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sashabaranov/go-openai"
 	"io"
-	"micli/conf"
+	"micli/internal/conf"
 	"time"
 )
 

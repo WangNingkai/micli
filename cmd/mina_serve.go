@@ -8,8 +8,8 @@ import (
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
-	"micli/conf"
 	"micli/internal"
+	"micli/internal/conf"
 	"micli/pkg/jarvis"
 	"micli/pkg/miservice"
 	"micli/pkg/tts"
@@ -53,16 +53,11 @@ var (
 		Long:  `Hack xiaoai Project`,
 		Run: func(cmd *cobra.Command, args []string) {
 			s := NewServe()
-			c := make(chan os.Signal)
-			signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
+			sigs := make(chan os.Signal)
+			signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
 			go func() {
-				for sig := range c {
-					switch sig {
-					case syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt:
-						pterm.Success.Println("serve stopped.")
-						s.Exit()
-					}
-				}
+				<-sigs
+				s.Exit()
 			}()
 			if err := s.Run(); err != nil {
 				pterm.Fatal.Println(err)

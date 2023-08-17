@@ -5,7 +5,7 @@ import (
 	"github.com/imroc/req/v3"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"micli/conf"
+	"micli/internal/conf"
 	"micli/pkg/tts"
 	"micli/pkg/tts/edgetts"
 )

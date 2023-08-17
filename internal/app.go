@@ -3,6 +3,7 @@ package internal
 import (
 	"github.com/gin-gonic/gin"
 	"micli/internal/middleware"
+	"micli/internal/static"
 )
 
 type App struct {
@@ -23,12 +24,15 @@ func (a *App) RegisterMiddlewares() {
 }
 
 func (a *App) RegisterRoutes() {
-	api := a.Group("api")
-	api.GET("/", func(c *gin.Context) {
+	web := a.Group("/")
+	api := web.Group("api")
+	api.Any("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "ok",
 		})
 	})
-	a.Use(middleware.NotFound())
+	static.Static(web, func(handlers ...gin.HandlerFunc) {
+		a.NoRoute(handlers...)
+	})
 
 }

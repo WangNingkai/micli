@@ -26,6 +26,8 @@ conf.ini
 devices.json
 commands.json
 data
+public/dist/*
+!public/dist/README.md
 
 
 

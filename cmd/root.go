@@ -6,7 +6,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"gopkg.in/ini.v1"
-	"micli/conf"
+	"micli/internal/conf"
 	"micli/pkg/miservice"
 	"os"
 )

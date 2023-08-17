@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"micli/conf"
+	"micli/internal/conf"
 )
 
 var (
