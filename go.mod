@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gorilla/websocket v1.5.0
-	github.com/imroc/req/v3 v3.41.4
+	github.com/imroc/req/v3 v3.41.6
 	github.com/json-iterator/go v1.1.12
 	github.com/pterm/pterm v0.12.65
 	github.com/samber/lo v1.38.1
