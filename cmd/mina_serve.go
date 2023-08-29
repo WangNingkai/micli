@@ -49,7 +49,7 @@ var (
 	}
 	minaServeCmd = &cobra.Command{
 		Use:   "serve",
-		Short: "Hack xiaoai Project",
+		Short: "Hack xiaoai Project(WIP)",
 		Long:  `Hack xiaoai Project`,
 		Run: func(cmd *cobra.Command, args []string) {
 			s := NewServe()
