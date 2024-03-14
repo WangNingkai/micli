@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/pterm/pterm"
 )
 
 const (
@@ -247,6 +249,12 @@ func (s *IOService) MiotSetProp(did string, prop []interface{}) (float64, error)
 }
 
 func (s *IOService) MiotAction(did string, iid []int, args []interface{}) (float64, error) {
+	pterm.Info.Println(map[string]interface{}{
+		"did":  did,
+		"siid": iid[0],
+		"aiid": iid[1],
+		"in":   args,
+	})
 	result, err := s.MiotRequest("action", map[string]interface{}{
 		"did":  did,
 		"siid": iid[0],

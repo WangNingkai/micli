@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/pterm/pterm"
-	"github.com/spf13/cobra"
 	"micli/internal/conf"
 	"micli/pkg/miservice"
 	"micli/pkg/util"
 	"strconv"
+
+	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -20,6 +21,11 @@ var (
 				res interface{}
 				err error
 			)
+			if len(args) < 1 {
+				err = fmt.Errorf("no args found")
+				pterm.Error.Println(err.Error())
+				return
+			}
 			if did == "" {
 				did = conf.Cfg.Section("account").Key("MI_DID").MustString("")
 				if did == "" {
