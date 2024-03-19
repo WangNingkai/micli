@@ -3,16 +3,17 @@ package edgetts
 import (
 	"context"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/imroc/req/v3"
-	"github.com/pterm/pterm"
-	uuid "github.com/satori/go.uuid"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/imroc/req/v3"
+	"github.com/pterm/pterm"
+	uuid "github.com/satori/go.uuid"
 )
 
 const (
@@ -29,18 +30,16 @@ const (
 	voiceFormat = "audio-24khz-48kbitrate-mono-mp3"
 )
 
-var (
-	edgeChinaIpList = []string{
-		// 北京微软云
-		"202.89.233.100",
-		"202.89.233.101",
-		"202.89.233.102",
-		"202.89.233.103",
-		"202.89.233.104",
+var edgeChinaIpList = []string{
+	// 北京微软云
+	"202.89.233.100",
+	"202.89.233.101",
+	"202.89.233.102",
+	"202.89.233.103",
+	"202.89.233.104",
 
-		//"182.61.148.24", 广东百度云
-	}
-)
+	//"182.61.148.24", 广东百度云
+}
 
 type Voice struct {
 	Name           string `json:"Name"`
@@ -147,10 +146,10 @@ func (t *EdgeTTS) GetAudio(ssml, format string) (audioData []byte, err error) {
 	}
 	running := true
 	defer func() { running = false }()
-	var finished = make(chan bool)
-	var failed = make(chan error)
+	finished := make(chan bool)
+	failed := make(chan error)
 	t.onReadMessage = func(messageType int, p []byte, errMessage error) bool {
-		if messageType == -1 && p == nil && errMessage != nil { //已经断开链接
+		if messageType == -1 && p == nil && errMessage != nil { // 已经断开链接
 			if running {
 				failed <- errMessage
 			}
@@ -195,10 +194,10 @@ func (t *EdgeTTS) GetAudioStream(ssml, format string, read func([]byte)) error {
 
 	running := true
 	defer func() { running = false }()
-	var finished = make(chan bool)
-	var failed = make(chan error)
+	finished := make(chan bool)
+	failed := make(chan error)
 	t.onReadMessage = func(messageType int, p []byte, errMessage error) bool {
-		if messageType == -1 && p == nil && errMessage != nil { //已经断开链接
+		if messageType == -1 && p == nil && errMessage != nil { // 已经断开链接
 			if running {
 				failed <- errMessage
 			}
@@ -262,7 +261,7 @@ func (t *EdgeTTS) TextToMp3(text string, voice string, filePath string) error {
 		pterm.Debug.Printf("Error: %v\n", err)
 		return err
 	}
-	err = os.WriteFile(filePath, b, 0644)
+	err = os.WriteFile(filePath, b, 0o644)
 	if err != nil {
 		pterm.Debug.Printf("Error: %v\n", err)
 		return err

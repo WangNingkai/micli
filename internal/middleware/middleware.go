@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,7 +26,7 @@ func CORSMiddleware() gin.HandlerFunc {
 
 func NotFound() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//c.AbortWithStatus(404)
+		// c.AbortWithStatus(404)
 		c.JSON(404, gin.H{
 			"msg":  "Not Found",
 			"data": "",

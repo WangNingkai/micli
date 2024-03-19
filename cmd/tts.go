@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/imroc/req/v3"
-	"github.com/pterm/pterm"
-	"github.com/spf13/cobra"
+
 	"micli/internal/conf"
 	"micli/pkg/tts"
 	"micli/pkg/tts/edgetts"
+
+	"github.com/imroc/req/v3"
+	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
 )
 
 var (

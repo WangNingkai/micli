@@ -2,13 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
+	"micli/internal/conf"
+	"micli/pkg/miservice"
+
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"gopkg.in/ini.v1"
-	"micli/internal/conf"
-	"micli/pkg/miservice"
-	"os"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary

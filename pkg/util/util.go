@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	jsoniter "github.com/json-iterator/go"
 	"io"
 	mathRand "math/rand"
 	"net"
@@ -21,6 +20,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -39,7 +40,7 @@ func Exists(name string) bool {
 func CreatNestedFile(path string) (*os.File, error) {
 	basePath := filepath.Dir(path)
 	if !Exists(basePath) {
-		err := os.MkdirAll(basePath, 0700)
+		err := os.MkdirAll(basePath, 0o700)
 		if err != nil {
 			return nil, err
 		}
@@ -49,7 +50,7 @@ func CreatNestedFile(path string) (*os.File, error) {
 }
 
 func GetRandom(length int) string {
-	var r = mathRand.New(mathRand.NewSource(time.Now().UnixNano()))
+	r := mathRand.New(mathRand.NewSource(time.Now().UnixNano()))
 	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	randomStr := make([]byte, length)
 	for i := range randomStr {

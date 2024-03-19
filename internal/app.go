@@ -1,9 +1,10 @@
 package internal
 
 import (
-	"github.com/gin-gonic/gin"
 	"micli/internal/middleware"
 	"micli/internal/static"
+
+	"github.com/gin-gonic/gin"
 )
 
 type App struct {
@@ -20,7 +21,6 @@ func NewApp(port string) *App {
 
 func (a *App) RegisterMiddlewares() {
 	a.Use(middleware.CORSMiddleware())
-
 }
 
 func (a *App) RegisterRoutes() {
@@ -34,5 +34,4 @@ func (a *App) RegisterRoutes() {
 	static.Static(web, func(handlers ...gin.HandlerFunc) {
 		a.NoRoute(handlers...)
 	})
-
 }

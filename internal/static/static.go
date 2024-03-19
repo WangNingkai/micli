@@ -3,18 +3,18 @@ package static
 import (
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io/fs"
+	"net/http"
+	"strings"
+
 	"micli/internal/conf"
 	"micli/pkg/util"
 	"micli/public"
-	"net/http"
-	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
-var (
-	RawIndexHtml string
-)
+var RawIndexHtml string
 
 func InitIndex() {
 	index, err := public.Public.ReadFile("dist/index.html")

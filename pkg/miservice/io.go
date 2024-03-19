@@ -6,11 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"micli/pkg/util"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+
+	"micli/pkg/util"
 
 	"github.com/pterm/pterm"
 )
@@ -269,7 +270,7 @@ func (s *IOService) MiotAction(did string, iid []int, args []interface{}) (float
 
 func (s *IOService) MiotSpec(keyword string) (data *MiotSpecInstancesData, err error) {
 	if keyword == "" || !strings.HasPrefix(keyword, "urn") {
-		//p := path.Join(os.TempDir(), "miot-spec.json")
+		// p := path.Join(os.TempDir(), "miot-spec.json")
 		p := "./data/miot-spec.json"
 		var specs map[string]string
 		specs, err = s.loadSpec(p)
@@ -375,7 +376,7 @@ func (s *IOService) getSpec(keyword string, specs map[string]string) map[string]
 	if keyword == "" {
 		return specs
 	}
-	var ret = make(map[string]string)
+	ret := make(map[string]string)
 	for k, v := range specs {
 		if k == keyword {
 			return map[string]string{k: v}

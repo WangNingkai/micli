@@ -2,18 +2,18 @@ package cmd
 
 import (
 	"fmt"
+
+	"micli/pkg/miservice"
+
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"micli/pkg/miservice"
 )
 
-var (
-	minaCmd = &cobra.Command{
-		Use:   "mina",
-		Short: "Mina Service",
-		Long:  `Mina Service`,
-	}
-)
+var minaCmd = &cobra.Command{
+	Use:   "mina",
+	Short: "Mina Service",
+	Long:  `Mina Service`,
+}
 
 func init() {
 	minaCmd.PersistentFlags().StringVarP(&minaDeviceID, "device", "d", "", "mina service device id, not miot did")

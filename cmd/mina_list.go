@@ -2,33 +2,33 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
+
+	"micli/pkg/miservice"
+
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
-	"micli/pkg/miservice"
-	"strings"
 )
 
-var (
-	minaListCmd = &cobra.Command{
-		Use:   "list <?keyword>",
-		Short: "List devices",
-		Long:  `List devices`,
-		Run: func(cmd *cobra.Command, args []string) {
-			var (
-				keyword string
-				err     error
-			)
-			if len(args) > 0 {
-				keyword = args[0]
-			}
-			_, err = list(minaSrv, keyword)
-			if err != nil {
-				pterm.Error.Println(err.Error())
-			}
-		},
-	}
-)
+var minaListCmd = &cobra.Command{
+	Use:   "list <?keyword>",
+	Short: "List devices",
+	Long:  `List devices`,
+	Run: func(cmd *cobra.Command, args []string) {
+		var (
+			keyword string
+			err     error
+		)
+		if len(args) > 0 {
+			keyword = args[0]
+		}
+		_, err = list(minaSrv, keyword)
+		if err != nil {
+			pterm.Error.Println(err.Error())
+		}
+	},
+}
 
 // list 设备列表
 func list(srv *miservice.MinaService, keyword string) (res interface{}, err error) {

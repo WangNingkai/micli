@@ -2,29 +2,29 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/pterm/pterm"
-	"github.com/spf13/cobra"
-	"micli/internal/conf"
-	"micli/pkg/miservice"
 	"strconv"
 	"time"
+
+	"micli/internal/conf"
+	"micli/pkg/miservice"
+
+	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
 )
 
-var (
-	minaRecordsCmd = &cobra.Command{
-		Use:   "records <?limit>",
-		Short: "Get records",
-		Long:  `Get records`,
-		Run: func(cmd *cobra.Command, args []string) {
-			var (
-				res interface{}
-				err error
-			)
-			res, err = askRecords(minaSrv, args)
-			handleResult(res, err)
-		},
-	}
-)
+var minaRecordsCmd = &cobra.Command{
+	Use:   "records <?limit>",
+	Short: "Get records",
+	Long:  `Get records`,
+	Run: func(cmd *cobra.Command, args []string) {
+		var (
+			res interface{}
+			err error
+		)
+		res, err = askRecords(minaSrv, args)
+		handleResult(res, err)
+	},
+}
 
 func askRecords(srv *miservice.MinaService, args []string) (res interface{}, err error) {
 	var limit int
@@ -84,7 +84,6 @@ func askRecords(srv *miservice.MinaService, args []string) (res interface{}, err
 	err = pterm.DefaultBulletList.WithItems(items).Render()
 
 	return
-
 }
 
 func init() {

@@ -3,30 +3,32 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"github.com/imroc/req/v3"
-	"github.com/pterm/pterm"
-	"github.com/samber/lo"
-	"github.com/spf13/cobra"
-	"github.com/tidwall/gjson"
-	"micli/internal"
-	"micli/internal/conf"
-	"micli/pkg/jarvis"
-	"micli/pkg/miservice"
-	"micli/pkg/tts"
-	"micli/pkg/util"
 	"os"
 	"os/signal"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	"micli/internal"
+	"micli/internal/conf"
+	"micli/pkg/jarvis"
+	"micli/pkg/miservice"
+	"micli/pkg/tts"
+	"micli/pkg/util"
+
+	"github.com/imroc/req/v3"
+	"github.com/pterm/pterm"
+	"github.com/samber/lo"
+	"github.com/spf13/cobra"
+	"github.com/tidwall/gjson"
 )
 
 var (
 	commandPath         = "./commands.json"
 	mute                bool
 	HardwareCommandDict = map[string][3]string{
-		//hardware: (tts_command, wakeup_command,execute_command)
+		// hardware: (tts_command, wakeup_command,execute_command)
 		"LX06": {"5-1", "5-3", "5-5"},
 		"L05B": {"5-3", "5-1", "5-4"},
 		"LX01": {"5-1", "5-2", "5-5"},
@@ -134,9 +136,7 @@ func NewServe() *Serve {
 }
 
 func (s *Serve) loadCommands() (err error) {
-	var (
-		f *os.File
-	)
+	var f *os.File
 	if !util.Exists(commandPath) {
 		err = errors.New("not found commands.json")
 		return
@@ -216,7 +216,6 @@ func (s *Serve) stop() error {
 	}*/
 	_, err := s.minaSrv.PlayerPause(minaDeviceID)
 	return err
-
 }
 
 func (s *Serve) isPlaying() (bool, error) {
@@ -300,7 +299,7 @@ func (s *Serve) Call(text string, silent bool) (err error) {
 	siid, aiid := util.TwinsSplit(_cmd, "-", "1")
 	sid, _ := strconv.Atoi(siid)
 	aid, _ := strconv.Atoi(aiid)
-	var silentInt = 0
+	silentInt := 0
 	if silent {
 		silentInt = 1
 	}

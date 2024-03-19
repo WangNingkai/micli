@@ -6,13 +6,15 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	jsoniter "github.com/json-iterator/go"
 	"io"
-	"micli/pkg/util"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
+
+	"micli/pkg/util"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -119,7 +121,7 @@ func (s *Service) login(sid string) error {
 		}
 		resp, err = s.serviceLogin("serviceLoginAuth2", data, cookies)
 		if err != nil {
-			//log.Println("serviceLoginAuth2 error", err)
+			// log.Println("serviceLoginAuth2 error", err)
 			return err
 		}
 		if resp.Code != 0 {
@@ -132,7 +134,7 @@ func (s *Service) login(sid string) error {
 	var serviceToken string
 	serviceToken, err = s.securityTokenService(resp.Location, resp.Ssecurity, resp.Nonce)
 	if err != nil {
-		//log.Println("securityTokenService error", err)
+		// log.Println("securityTokenService error", err)
 		return err
 	}
 	s.token.Sids[sid] = SidToken{
@@ -155,7 +157,7 @@ func (s *Service) Request(sid, u string, data url.Values, cb DataCb, headers htt
 			return err
 		}
 	}
-	//log.Println("request token done")
+	// log.Println("request token done")
 	req := s.buildRequest(sid, u, data, cb, headers)
 	resp, err := s.client.Do(req)
 	if err != nil {
@@ -174,7 +176,7 @@ func (s *Service) Request(sid, u string, data url.Values, cb DataCb, headers htt
 		if err != nil {
 			return err
 		}
-		//pterm.Println("response", u, string(rs))
+		// pterm.Println("response", u, string(rs))
 		var result *_result
 		err = json.Unmarshal(rs, &result)
 		if err != nil {
@@ -210,12 +212,12 @@ func (s *Service) buildRequest(sid, u string, data url.Values, cb DataCb, header
 		{Name: "yetAnotherServiceToken", Value: s.token.Sids[sid].ServiceToken},
 		{Name: "channel", Value: "MI_APP_STORE"},
 	}
-	//pterm.Println("tokens", s.token)
+	// pterm.Println("tokens", s.token)
 	method := http.MethodGet
 	if data != nil || cb != nil {
 		var values url.Values
 		if cb != nil {
-			var cookieMap = make(map[string]string)
+			cookieMap := make(map[string]string)
 			values = cb(s.token, cookieMap)
 			for k, v := range cookieMap {
 				cookies = append(cookies, &http.Cookie{Name: k, Value: v})
@@ -225,7 +227,7 @@ func (s *Service) buildRequest(sid, u string, data url.Values, cb DataCb, header
 		}
 		if values != nil {
 			method = http.MethodPost
-			//pterm.Println(values)
+			// pterm.Println(values)
 			body = strings.NewReader(values.Encode())
 			headers.Set("Content-Type", "application/x-www-form-urlencoded")
 		}
@@ -261,29 +263,29 @@ func (s *Service) serviceLogin(uri string, data url.Values, cookies []*http.Cook
 	for _, cookie := range cookies {
 		req.AddCookie(cookie)
 	}
-	//log.Println("service login", req.URL.String())
+	// log.Println("service login", req.URL.String())
 	resp, err := s.client.Do(req)
 	if err != nil {
-		//log.Println("http do request error", err)
+		// log.Println("http do request error", err)
 		return nil, err
 	}
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(resp.Body)
-	//log.Println("service login return", resp.StatusCode)
+	// log.Println("service login return", resp.StatusCode)
 	var body []byte
 	body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	//log.Println("body", string(body))
+	// log.Println("body", string(body))
 	var jsonResponse loginResp
 	err = json.Unmarshal(body[11:], &jsonResponse)
 	if err != nil {
-		//log.Println("json unmarshal error", err, string(body))
+		// log.Println("json unmarshal error", err, string(body))
 		return nil, err
 	}
-	//log.Println("service login success", jsonResponse)
+	// log.Println("service login success", jsonResponse)
 	return &jsonResponse, nil
 }
 
@@ -293,7 +295,7 @@ func (s *Service) secureUrl(location, sSecurity string, nonce int64) string {
 	sum := sha1.Sum([]byte(sNonce))
 	clientSign := base64.StdEncoding.EncodeToString(sum[:])
 	es := url.QueryEscape(clientSign)
-	//es = strings.ReplaceAll(es, "%2F", "/")
+	// es = strings.ReplaceAll(es, "%2F", "/")
 	requestUrl := fmt.Sprintf("%s&clientSign=%s", location, es)
 	return requestUrl
 }
@@ -301,7 +303,7 @@ func (s *Service) secureUrl(location, sSecurity string, nonce int64) string {
 // securityTokenService 获取安全令牌
 func (s *Service) securityTokenService(location, sSecurity string, nonce int64) (string, error) {
 	requestUrl := s.secureUrl(location, sSecurity, nonce)
-	//log.Println("securityTokenService", requestUrl)
+	// log.Println("securityTokenService", requestUrl)
 	req, _ := http.NewRequest(http.MethodGet, requestUrl, nil)
 	headers := http.Header{
 		"User-Agent": []string{"APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS"},

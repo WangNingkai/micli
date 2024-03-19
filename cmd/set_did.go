@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/pterm/pterm"
-	"github.com/spf13/cobra"
+
 	"micli/internal/conf"
 	"micli/pkg/miservice"
 	"micli/pkg/util"
+
+	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
 )
 
 var (

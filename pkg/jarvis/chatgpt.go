@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"time"
+
+	"micli/internal/conf"
+
 	"github.com/pterm/pterm"
 	"github.com/sashabaranov/go-openai"
-	"io"
-	"micli/internal/conf"
-	"time"
 )
 
 type ChatGPT struct {

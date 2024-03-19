@@ -3,12 +3,13 @@ package edgetts
 import (
 	"context"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/pterm/pterm"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/pterm/pterm"
 )
 
 const (
@@ -62,7 +63,7 @@ func (t *AzureTTS) NewConn() error {
 		return fmt.Errorf("%w: %s", err, resp.Status)
 	}
 
-	var size = 0
+	size := 0
 	go func() {
 		for {
 			if t.conn == nil {
@@ -70,7 +71,7 @@ func (t *AzureTTS) NewConn() error {
 			}
 			messageType, p, err := t.conn.ReadMessage()
 			size += len(p)
-			if size >= 2000000 { //大于2MB主动断开
+			if size >= 2000000 { // 大于2MB主动断开
 				t.onReadMessage(-1, nil, &websocket.CloseError{Code: websocket.CloseAbnormalClosure})
 				t.conn = nil
 				return
@@ -118,10 +119,10 @@ func (t *AzureTTS) GetAudioStream(ssml, format string, read func([]byte)) error 
 		running = false
 	}()
 
-	var finished = make(chan bool)
-	var failed = make(chan error)
+	finished := make(chan bool)
+	failed := make(chan error)
 	t.onReadMessage = func(messageType int, p []byte, errMessage error) bool {
-		if messageType == -1 && p == nil && errMessage != nil { //已经断开链接
+		if messageType == -1 && p == nil && errMessage != nil { // 已经断开链接
 			if running {
 				failed <- errMessage
 			}

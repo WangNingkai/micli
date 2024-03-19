@@ -3,31 +3,31 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"github.com/imroc/req/v3"
-	"github.com/pterm/pterm"
-	"github.com/spf13/cobra"
+	"regexp"
+	"strconv"
+
 	"micli/internal/conf"
 	"micli/pkg/miservice"
 	"micli/pkg/tts"
-	"regexp"
-	"strconv"
+
+	"github.com/imroc/req/v3"
+	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
 )
 
-var (
-	minaPlayerCmd = &cobra.Command{
-		Use:   "player <play|pause|volume|status> <?arg2>",
-		Short: "Player",
-		Long:  `Player`,
-		Run: func(cmd *cobra.Command, args []string) {
-			var (
-				res interface{}
-				err error
-			)
-			res, err = operatePlayer(minaSrv, args)
-			handleResult(res, err)
-		},
-	}
-)
+var minaPlayerCmd = &cobra.Command{
+	Use:   "player <play|pause|volume|status> <?arg2>",
+	Short: "Player",
+	Long:  `Player`,
+	Run: func(cmd *cobra.Command, args []string) {
+		var (
+			res interface{}
+			err error
+		)
+		res, err = operatePlayer(minaSrv, args)
+		handleResult(res, err)
+	},
+}
 
 // operatePlayer 播放器操作
 func operatePlayer(srv *miservice.MinaService, args []string) (res interface{}, err error) {
@@ -75,7 +75,7 @@ func operatePlayer(srv *miservice.MinaService, args []string) (res interface{}, 
 			err = pterm.DefaultBulletList.WithItems(items).Render()
 		case "play":
 			if len(args) > 1 {
-				var audioUrl = args[1]
+				audioUrl := args[1]
 				urlRegex := regexp.MustCompile(`^(http|https)://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(?:/[^/]*)*$`)
 				if !urlRegex.MatchString(audioUrl) {
 					// tts

@@ -2,13 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
+	"micli/pkg/miservice"
+	"micli/pkg/util"
+
 	"github.com/pterm/pterm"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
-	"micli/pkg/miservice"
-	"micli/pkg/util"
-	"os"
-	"strings"
 )
 
 var (
@@ -79,7 +81,6 @@ var (
 			if err != nil {
 				pterm.Error.Println(err.Error())
 			}
-
 		},
 	}
 )

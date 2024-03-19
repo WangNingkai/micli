@@ -2,10 +2,11 @@ package miservice
 
 import (
 	"fmt"
-	"micli/pkg/util"
 	"net/http"
 	"net/url"
 	"time"
+
+	"micli/pkg/util"
 )
 
 const (
@@ -187,7 +188,8 @@ func (s *MinaService) PlayerPlay(deviceId string) (map[string]interface{}, error
 }
 
 func (s *MinaService) PlayerGetStatus(deviceId string) (
-	*PlayerStatus, error) {
+	*PlayerStatus, error,
+) {
 	var res PlayerStatus
 	err := s.UbusRequest(deviceId, "player_get_play_status", "mediaplayer", map[string]interface{}{"media": "app_ios"}, &res)
 	return &res, err
