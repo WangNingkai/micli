@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"micli/internal/conf"
@@ -31,11 +32,27 @@ func NewChatGPT() *ChatGPT {
 }
 
 func (c *ChatGPT) Ask(msg string) (reply string, err error) {
-	model := openai.GPT3Dot5Turbo
-	if c.Model != "" {
-		model = c.Model
+	model := openai.GPT3Dot5Turbo16K
+	var config openai.ClientConfig
+	var resp openai.ChatCompletionResponse
+	if strings.Contains(c.BaseURL, "azure") {
+		config = openai.DefaultAzureConfig(c.Key, c.BaseURL)
+		config.AzureModelMapperFunc = func(model string) string {
+			azureModelMapping := map[string]string{
+				"gpt-3.5-turbo-16k": "gpt-35-turbo-16k",
+			}
+			return azureModelMapping[model]
+		}
+	} else {
+		if c.Model != "" {
+			model = c.Model
+		}
+		config := openai.DefaultConfig(c.Key)
+		if c.BaseURL != "" {
+			config.BaseURL = c.BaseURL
+		}
 	}
-	config := openai.DefaultConfig(c.Key)
+	config = openai.DefaultConfig(c.Key)
 	if c.BaseURL != "" {
 		config.BaseURL = c.BaseURL
 	}
@@ -58,8 +75,6 @@ func (c *ChatGPT) Ask(msg string) (reply string, err error) {
 		PresencePenalty:  0,
 		FrequencyPenalty: 0,
 	}
-
-	var resp openai.ChatCompletionResponse
 	resp, err = client.CreateChatCompletion(context.Background(), req)
 	if err != nil {
 		err = fmt.Errorf("ChatCompletion error: %v\n", err)
@@ -71,14 +86,26 @@ func (c *ChatGPT) Ask(msg string) (reply string, err error) {
 }
 
 func (c *ChatGPT) AskStream(msg string) error {
-	model := openai.GPT3Dot5Turbo
-	if c.Model != "" {
-		model = c.Model
+	var config openai.ClientConfig
+	model := openai.GPT3Dot5Turbo16K
+	if strings.Contains(c.BaseURL, "azure") {
+		config = openai.DefaultAzureConfig(c.Key, c.BaseURL)
+		config.AzureModelMapperFunc = func(model string) string {
+			azureModelMapping := map[string]string{
+				"gpt-3.5-turbo-16k": "gpt-35-turbo-16k",
+			}
+			return azureModelMapping[model]
+		}
+	} else {
+		if c.Model != "" {
+			model = c.Model
+		}
+		config := openai.DefaultConfig(c.Key)
+		if c.BaseURL != "" {
+			config.BaseURL = c.BaseURL
+		}
 	}
-	config := openai.DefaultConfig(c.Key)
-	if c.BaseURL != "" {
-		config.BaseURL = c.BaseURL
-	}
+
 	client := openai.NewClientWithConfig(config)
 	req := openai.ChatCompletionRequest{
 		Model: model,

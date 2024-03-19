@@ -24,6 +24,9 @@ KEY = ""
 BASE_URL = ""
 
 [mina]
+DID = 
+
+[mina]
 DID = ""
 
 [file]
