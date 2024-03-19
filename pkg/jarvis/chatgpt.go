@@ -34,7 +34,6 @@ func NewChatGPT() *ChatGPT {
 func (c *ChatGPT) Ask(msg string) (reply string, err error) {
 	model := openai.GPT3Dot5Turbo16K
 	var config openai.ClientConfig
-	var resp openai.ChatCompletionResponse
 	if strings.Contains(c.BaseURL, "azure") {
 		config = openai.DefaultAzureConfig(c.Key, c.BaseURL)
 		config.AzureModelMapperFunc = func(model string) string {
@@ -52,11 +51,7 @@ func (c *ChatGPT) Ask(msg string) (reply string, err error) {
 			config.BaseURL = c.BaseURL
 		}
 	}
-	config = openai.DefaultConfig(c.Key)
-	if c.BaseURL != "" {
-		config.BaseURL = c.BaseURL
-	}
-
+	var resp openai.ChatCompletionResponse
 	client := openai.NewClientWithConfig(config)
 	req := openai.ChatCompletionRequest{
 		Model: model,
