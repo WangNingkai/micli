@@ -28,7 +28,7 @@ commands.json
 data
 public/dist/*
 !public/dist/README.md
-
+micli
 
 
 
