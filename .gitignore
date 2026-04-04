@@ -29,6 +29,6 @@ data
 public/dist/*
 !public/dist/README.md
 micli
-
-
+.omc
+**DS_Store
 
