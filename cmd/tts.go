@@ -50,6 +50,7 @@ var (
 
 			fp, err = tts.TextToMp3(text, voice)
 			if err != nil {
+				pterm.Error.Printf("TTS failed: %v\n", err)
 				return
 			}
 			client := req.C()
@@ -57,6 +58,10 @@ var (
 			r.SetFile("file", fp)
 			var resp *req.Response
 			resp, err = r.Put(fmt.Sprintf("%s/edge_tts.mp3", conf.Cfg.Section("file").Key("TRANSFER_SH").MustString("https://transfer.sh")))
+			if err != nil {
+				pterm.Error.Printf("Upload failed: %v\n", err)
+				return
+			}
 			textUrl := resp.String()
 			pterm.Success.Println("tts url:", textUrl)
 		},

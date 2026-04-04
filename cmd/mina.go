@@ -25,47 +25,33 @@ func init() {
 	minaCmd.AddCommand(setMinaDidCmd)
 }
 
-func chooseMinaDevice(srv *miservice.MinaService) (deviceId string, err error) {
-	if deviceId == "" {
-		var devices []*miservice.DeviceData
-		devices, err = srv.DeviceList(0)
-		if err != nil {
-			return
-		}
-		deviceMap := make(map[string]string)
-		choices := make([]string, len(devices))
-		for i, device := range devices {
-			choice := fmt.Sprintf("%s - %s", device.Name, device.DeviceID)
-			deviceMap[choice] = device.DeviceID
-			choices[i] = choice
-		}
-		choice, _ := pterm.DefaultInteractiveSelect.
-			WithDefaultText("Please select a device").
-			WithOptions(choices).
-			Show()
-		pterm.Info.Println("Choose Device: " + choice)
-		deviceId = deviceMap[choice]
-	}
-	return
-}
-
-func chooseMinaDeviceDetail(srv *miservice.MinaService, deviceId string) (device *miservice.DeviceData, err error) {
+// selectMinaDevice 选择小爱设备，返回设备ID或完整设备信息
+// 如果 returnDetail 为 true，返回完整设备信息；否则只返回设备ID
+// 如果 targetDeviceId 不为空，直接匹配该设备；否则交互式选择
+func selectMinaDevice(srv *miservice.MinaService, targetDeviceId string, returnDetail bool) (deviceId string, device *miservice.DeviceData, err error) {
 	var devices []*miservice.DeviceData
 	devices, err = srv.DeviceList(0)
 	if err != nil {
 		return
 	}
-	deviceMap := make(map[string]*miservice.DeviceData)
-	choices := make([]string, len(devices))
-	for i, _device := range devices {
-		if deviceId != "" {
-			if _device.DeviceID == deviceId {
-				device = _device
+
+	// 如果指定了设备ID，直接查找
+	if targetDeviceId != "" {
+		for _, d := range devices {
+			if d.DeviceID == targetDeviceId {
+				deviceId = d.DeviceID
+				device = d
 				return
 			}
 		}
-		choice := fmt.Sprintf("%s - %s", _device.Name, _device.DeviceID)
-		deviceMap[choice] = _device
+	}
+
+	// 交互式选择
+	deviceMap := make(map[string]*miservice.DeviceData)
+	choices := make([]string, len(devices))
+	for i, d := range devices {
+		choice := fmt.Sprintf("%s - %s", d.Name, d.DeviceID)
+		deviceMap[choice] = d
 		choices[i] = choice
 	}
 	choice, _ := pterm.DefaultInteractiveSelect.
@@ -73,6 +59,21 @@ func chooseMinaDeviceDetail(srv *miservice.MinaService, deviceId string) (device
 		WithOptions(choices).
 		Show()
 	pterm.Info.Println("Choose Device: " + choice)
-	device = deviceMap[choice]
+
+	selected := deviceMap[choice]
+	deviceId = selected.DeviceID
+	device = selected
 	return
+}
+
+// chooseMinaDevice 选择小爱设备，返回设备ID
+func chooseMinaDevice(srv *miservice.MinaService) (string, error) {
+	deviceId, _, err := selectMinaDevice(srv, minaDeviceID, false)
+	return deviceId, err
+}
+
+// chooseMinaDeviceDetail 选择小爱设备，返回完整设备信息
+func chooseMinaDeviceDetail(srv *miservice.MinaService, targetDeviceId string) (*miservice.DeviceData, error) {
+	_, device, err := selectMinaDevice(srv, targetDeviceId, true)
+	return device, err
 }

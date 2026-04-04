@@ -25,11 +25,16 @@ func TextToMp3(text string, voice string) (string, error) {
 		return "", err
 	}
 	filename := fmt.Sprintf("%s.mp3", time.Now().Format("20060102150405"))
-	tempDir, _ := os.MkdirTemp("", "micli-tts-")
+	tempDir, err := os.MkdirTemp("", "micli-tts-")
+	if err != nil {
+		pterm.Error.Printf("Error: %v\n", err)
+		return "", err
+	}
 	fp := filepath.Join(tempDir, filename)
 	err = os.WriteFile(fp, b, 0o644)
 	if err != nil {
 		pterm.Error.Printf("Error: %v\n", err)
+		_ = os.RemoveAll(tempDir)
 		return "", err
 	}
 	return fp, nil

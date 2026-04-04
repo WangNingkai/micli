@@ -55,7 +55,7 @@ var (
 		Long:  `Hack xiaoai Project`,
 		Run: func(cmd *cobra.Command, args []string) {
 			s := NewServe()
-			sigs := make(chan os.Signal)
+			sigs := make(chan os.Signal, 1)
 			signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
 			go func() {
 				<-sigs

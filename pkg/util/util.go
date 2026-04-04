@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -25,6 +26,19 @@ import (
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
+// 全局 rand 实例，避免每次调用都创建新 Source
+var (
+	globalRand     *mathRand.Rand
+	globalRandOnce sync.Once
+)
+
+func getGlobalRand() *mathRand.Rand {
+	globalRandOnce.Do(func() {
+		globalRand = mathRand.New(mathRand.NewSource(time.Now().UnixNano()))
+	})
+	return globalRand
+}
 
 // Exists reports whether the named file or directory exists.
 func Exists(name string) bool {
@@ -50,7 +64,7 @@ func CreatNestedFile(path string) (*os.File, error) {
 }
 
 func GetRandom(length int) string {
-	r := mathRand.New(mathRand.NewSource(time.Now().UnixNano()))
+	r := getGlobalRand()
 	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	randomStr := make([]byte, length)
 	for i := range randomStr {

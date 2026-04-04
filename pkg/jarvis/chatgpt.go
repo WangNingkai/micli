@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"micli/internal/conf"
@@ -22,6 +23,9 @@ type ChatGPT struct {
 
 	InStream      bool
 	StreamMessage chan string
+
+	client     *openai.Client
+	clientOnce sync.Once
 }
 
 func NewChatGPT() *ChatGPT {
@@ -31,28 +35,44 @@ func NewChatGPT() *ChatGPT {
 	}
 }
 
-func (c *ChatGPT) Ask(msg string) (reply string, err error) {
-	model := openai.GPT3Dot5Turbo16K
-	var config openai.ClientConfig
+// getClient 获取或创建 OpenAI client（懒加载，复用）
+func (c *ChatGPT) getClient() *openai.Client {
+	c.clientOnce.Do(func() {
+		c.client = openai.NewClientWithConfig(c.buildConfig())
+	})
+	return c.client
+}
+
+// buildConfig 构建客户端配置
+func (c *ChatGPT) buildConfig() openai.ClientConfig {
 	if strings.Contains(c.BaseURL, "azure") {
-		config = openai.DefaultAzureConfig(c.Key, c.BaseURL)
+		config := openai.DefaultAzureConfig(c.Key, c.BaseURL)
 		config.AzureModelMapperFunc = func(model string) string {
 			azureModelMapping := map[string]string{
 				"gpt-3.5-turbo-16k": "gpt-35-turbo-16k",
 			}
 			return azureModelMapping[model]
 		}
-	} else {
-		if c.Model != "" {
-			model = c.Model
-		}
-		config := openai.DefaultConfig(c.Key)
-		if c.BaseURL != "" {
-			config.BaseURL = c.BaseURL
-		}
+		return config
 	}
-	var resp openai.ChatCompletionResponse
-	client := openai.NewClientWithConfig(config)
+	config := openai.DefaultConfig(c.Key)
+	if c.BaseURL != "" {
+		config.BaseURL = c.BaseURL
+	}
+	return config
+}
+
+// getModel 获取使用的模型
+func (c *ChatGPT) getModel() string {
+	if c.Model != "" {
+		return c.Model
+	}
+	return openai.GPT3Dot5Turbo16K
+}
+
+func (c *ChatGPT) Ask(msg string) (reply string, err error) {
+	model := c.getModel()
+	client := c.getClient()
 	req := openai.ChatCompletionRequest{
 		Model: model,
 		Messages: []openai.ChatCompletionMessage{
@@ -70,7 +90,7 @@ func (c *ChatGPT) Ask(msg string) (reply string, err error) {
 		PresencePenalty:  0,
 		FrequencyPenalty: 0,
 	}
-	resp, err = client.CreateChatCompletion(context.Background(), req)
+	resp, err := client.CreateChatCompletion(context.Background(), req)
 	if err != nil {
 		err = fmt.Errorf("ChatCompletion error: %v\n", err)
 		return
@@ -81,27 +101,8 @@ func (c *ChatGPT) Ask(msg string) (reply string, err error) {
 }
 
 func (c *ChatGPT) AskStream(msg string) error {
-	var config openai.ClientConfig
-	model := openai.GPT3Dot5Turbo16K
-	if strings.Contains(c.BaseURL, "azure") {
-		config = openai.DefaultAzureConfig(c.Key, c.BaseURL)
-		config.AzureModelMapperFunc = func(model string) string {
-			azureModelMapping := map[string]string{
-				"gpt-3.5-turbo-16k": "gpt-35-turbo-16k",
-			}
-			return azureModelMapping[model]
-		}
-	} else {
-		if c.Model != "" {
-			model = c.Model
-		}
-		config := openai.DefaultConfig(c.Key)
-		if c.BaseURL != "" {
-			config.BaseURL = c.BaseURL
-		}
-	}
-
-	client := openai.NewClientWithConfig(config)
+	model := c.getModel()
+	client := c.getClient()
 	req := openai.ChatCompletionRequest{
 		Model: model,
 		Messages: []openai.ChatCompletionMessage{
