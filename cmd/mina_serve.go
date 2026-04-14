@@ -56,7 +56,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			s := NewServe()
 			sigs := make(chan os.Signal, 1)
-			signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
+			signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
 			go func() {
 				<-sigs
 				s.Exit()
@@ -114,7 +114,6 @@ type Command struct {
 type Serve struct {
 	minaSrv        *miservice.MinaService
 	miioSrv        *miservice.IOService
-	app            *internal.App
 	LastTimestamp  int64
 	InConversation bool
 
@@ -273,7 +272,11 @@ func (s *Serve) edgeTTS(voice string, message string, wait bool) (err error) {
 	client := req.C()
 	r := client.R()
 	r.SetFile("file", fp)
-	resp, err := r.Put(fmt.Sprintf("%s/edge_tts.mp3", conf.Cfg.Section("file").Key("TRANSFER_SH").MustString("https://transfer.sh")))
+	var resp *req.Response
+	resp, err = r.Put(fmt.Sprintf("%s/edge_tts.mp3", conf.Cfg.Section("file").Key("TRANSFER_SH").MustString("https://transfer.sh")))
+	if err != nil {
+		return
+	}
 	textUrl := resp.String()
 	pterm.Debug.Println("Play Audio URL: ", textUrl)
 	_, err = s.minaSrv.PlayByUrl(s.device.DeviceID, textUrl)

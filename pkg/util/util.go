@@ -50,7 +50,8 @@ func Exists(name string) bool {
 	return true
 }
 
-// CreatNestedFile 给定path创建文件，如果目录不存在就递归创建
+// CreatNestedFile creates a file at the given path, creating parent directories if needed.
+// File permissions are set to 0600 for security (owner read/write only).
 func CreatNestedFile(path string) (*os.File, error) {
 	basePath := filepath.Dir(path)
 	if !Exists(basePath) {
@@ -60,7 +61,7 @@ func CreatNestedFile(path string) (*os.File, error) {
 		}
 	}
 
-	return os.Create(path)
+	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 }
 
 func GetRandom(length int) string {

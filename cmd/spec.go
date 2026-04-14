@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"micli/pkg/miservice"
 
@@ -68,7 +69,7 @@ var specCmd = &cobra.Command{
 						if property.Description == "" {
 							types := strings.Split(property.Type, ":")
 							if len(types) > 3 {
-								property.Description = strings.Title(strings.ReplaceAll(types[3], "-", " "))
+								property.Description = titleCase(strings.ReplaceAll(types[3], "-", " "))
 							}
 						}
 						piids[property.Iid] = property.Description
@@ -111,6 +112,18 @@ var specCmd = &cobra.Command{
 			}
 		}
 	},
+}
+
+func titleCase(s string) string {
+	words := strings.Split(s, " ")
+	for i, w := range words {
+		if len(w) > 0 {
+			runes := []rune(w)
+			runes[0] = unicode.ToUpper(runes[0])
+			words[i] = string(runes)
+		}
+	}
+	return strings.Join(words, " ")
 }
 
 func init() {

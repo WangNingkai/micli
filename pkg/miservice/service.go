@@ -15,6 +15,7 @@ import (
 	"micli/pkg/util"
 
 	jsoniter "github.com/json-iterator/go"
+	"github.com/pterm/pterm"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -232,7 +233,11 @@ func (s *Service) buildRequest(sid, u string, data url.Values, cb DataCb, header
 			headers.Set("Content-Type", "application/x-www-form-urlencoded")
 		}
 	}
-	req, _ = http.NewRequest(method, u, body)
+	req, err := http.NewRequest(method, u, body)
+	if err != nil {
+		pterm.Error.Printf("buildRequest failed: %v", err)
+		return nil
+	}
 	if headers != nil {
 		req.Header = headers
 	}
@@ -257,7 +262,11 @@ func (s *Service) serviceLogin(uri string, data url.Values, cookies []*http.Cook
 		method = http.MethodPost
 		headers.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
-	req, _ := http.NewRequest(method, fmt.Sprintf("https://account.xiaomi.com/pass/%s", uri), reqBody)
+	req, err := http.NewRequest(method, fmt.Sprintf("https://account.xiaomi.com/pass/%s", uri), reqBody)
+	if err != nil {
+		pterm.Error.Printf("serviceLogin create request failed: %v", err)
+		return nil, err
+	}
 	req.Header = headers
 
 	for _, cookie := range cookies {
@@ -304,7 +313,11 @@ func (s *Service) secureUrl(location, sSecurity string, nonce int64) string {
 func (s *Service) securityTokenService(location, sSecurity string, nonce int64) (string, error) {
 	requestUrl := s.secureUrl(location, sSecurity, nonce)
 	// log.Println("securityTokenService", requestUrl)
-	req, _ := http.NewRequest(http.MethodGet, requestUrl, nil)
+	req, err := http.NewRequest(http.MethodGet, requestUrl, nil)
+	if err != nil {
+		pterm.Error.Printf("securityTokenService create request failed: %v", err)
+		return "", err
+	}
 	headers := http.Header{
 		"User-Agent": []string{"APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS"},
 	}

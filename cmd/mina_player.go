@@ -47,6 +47,9 @@ func operatePlayer(srv *miservice.MinaService, args []string) (res interface{}, 
 		case "status":
 			var statusData *miservice.PlayerStatus
 			statusData, err = srv.PlayerGetStatus(deviceId)
+			if err != nil {
+				return
+			}
 			type info struct {
 				Status int `json:"status"`
 				Volume int `json:"volume"`
@@ -89,6 +92,9 @@ func operatePlayer(srv *miservice.MinaService, args []string) (res interface{}, 
 					r.SetFile("file", fp)
 					var resp *req.Response
 					resp, err = r.Put(fmt.Sprintf("%s/edge_tts.mp3", conf.Cfg.Section("file").Key("TRANSFER_SH").MustString("https://transfer.sh")))
+					if err != nil {
+						return
+					}
 					audioUrl = resp.String()
 					pterm.Debug.Println("tts url:", audioUrl)
 				}

@@ -52,7 +52,6 @@ func init() {
 	rootCmd.AddCommand(miioRawCmd)
 	rootCmd.AddCommand(setDidCmd)
 	rootCmd.AddCommand(ttsCmd)
-	rootCmd.AddCommand(TestCmd)
 }
 
 func initConf() {
@@ -92,8 +91,12 @@ func handleResult(res interface{}, err error) {
 		if resStr, ok := res.(string); ok {
 			pterm.NewStyle(pterm.FgGreen).Println(resStr)
 		} else {
-			resBytes, _ := json.MarshalIndent(res, "", "  ")
-			pterm.NewStyle(pterm.FgGreen).Println(string(resBytes))
+			resBytes, err := json.MarshalIndent(res, "", "  ")
+			if err != nil {
+				pterm.Warning.Printf("Failed to marshal result: %v, raw: %v", err, res)
+			} else {
+				pterm.NewStyle(pterm.FgGreen).Println(string(resBytes))
+			}
 		}
 	}
 }

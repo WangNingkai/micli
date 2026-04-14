@@ -56,7 +56,7 @@ func (mts *FileTokenStore) SaveToken(tokens *Tokens) (err error) {
 		if err != nil {
 			return
 		}
-		err = os.WriteFile(mts.tokenPath, data, 0o644)
+		err = os.WriteFile(mts.tokenPath, data, 0o600)
 		if err != nil {
 			return
 		}

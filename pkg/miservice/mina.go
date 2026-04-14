@@ -148,7 +148,10 @@ func (s *MinaService) LastAskList(deviceId string, hardware string, limit, out a
 }
 
 func (s *MinaService) UbusRequest(deviceId, method, path string, message map[string]interface{}, res any) error {
-	messageJSON, _ := json.Marshal(message)
+	messageJSON, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("marshal message failed: %w", err)
+	}
 	data := url.Values{
 		"deviceId": []string{deviceId},
 		"message":  []string{string(messageJSON)},
@@ -156,7 +159,7 @@ func (s *MinaService) UbusRequest(deviceId, method, path string, message map[str
 		"path":     []string{path},
 	}
 
-	err := s.Request("/remote/ubus", data, res)
+	err = s.Request("/remote/ubus", data, res)
 	if err != nil {
 		return err
 	}

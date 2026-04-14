@@ -45,6 +45,9 @@ func askRecords(srv *miservice.MinaService, args []string) (res interface{}, err
 	}
 	var resp *miservice.AskRecords
 	err = srv.LastAskList(device.DeviceID, device.Hardware, limit, &resp)
+	if err != nil {
+		return
+	}
 
 	var record *miservice.AskRecord
 	err = json.Unmarshal([]byte(resp.Data), &record)

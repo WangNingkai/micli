@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -117,13 +116,18 @@ var propsGetCmd = &cobra.Command{
 		var data []interface{}
 		if miot {
 			data, err = ioSrv.MiotGetProps(did, props)
+			if err != nil {
+				pterm.Error.Println(err.Error())
+				return
+			}
 		} else {
 			/*var _props []string
 			for _, prop := range props {
 				_props = append(_props, prop[0].(string))
 			}
 			res, err = ioSrv.HomeGetProps(did, _props)*/
-			err = errors.New("device not support miot")
+			pterm.Error.Println("device not support miot")
+			return
 		}
 
 		var items []pterm.BulletListItem

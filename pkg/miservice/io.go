@@ -101,7 +101,7 @@ func (s *IOService) Request(uri string, args map[string]interface{}) (interface{
 	if err != nil {
 		return nil, err
 	}
-	result, ok := resp.(map[string]interface{})["result"].(interface{})
+	result, ok := resp.(map[string]interface{})["result"]
 	if !ok {
 		return nil, fmt.Errorf("error %s: %v", uri, resp)
 	}
@@ -120,16 +120,47 @@ func (s *IOService) DeviceList() (devices []*DeviceInfo, err error) {
 	if err != nil {
 		return nil, err
 	}
-	deviceList := result.(map[string]interface{})["list"].([]interface{})
-	devices = make([]*DeviceInfo, len(deviceList))
-	for i, item := range deviceList {
-		device := item.(map[string]interface{})
-		devices[i] = &DeviceInfo{
-			Name:  device["name"].(string),
-			Model: device["model"].(string),
-			Did:   device["did"].(string),
-			Token: device["token"].(string),
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected map[string]interface{} for device_list result, got %T", result)
+	}
+	list, ok := resultMap["list"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected []interface{} for 'list', got %T", resultMap["list"])
+	}
+	devices = make([]*DeviceInfo, 0, len(list))
+	for _, item := range list {
+		device, ok := item.(map[string]interface{})
+		if !ok {
+			pterm.Warning.Printf("device item is not map[string]interface{}, got %T, skipping\n", item)
+			continue
 		}
+		name, ok := device["name"].(string)
+		if !ok {
+			pterm.Warning.Printf("device 'name' is not string, got %T, skipping\n", device["name"])
+			continue
+		}
+		model, ok := device["model"].(string)
+		if !ok {
+			pterm.Warning.Printf("device 'model' is not string, got %T, skipping\n", device["model"])
+			continue
+		}
+		did, ok := device["did"].(string)
+		if !ok {
+			pterm.Warning.Printf("device 'did' is not string, got %T, skipping\n", device["did"])
+			continue
+		}
+		token, ok := device["token"].(string)
+		if !ok {
+			pterm.Warning.Printf("device 'token' is not string, got %T, skipping\n", device["token"])
+			continue
+		}
+		devices = append(devices, &DeviceInfo{
+			Name:  name,
+			Model: model,
+			Did:   did,
+			Token: token,
+		})
 	}
 	return
 }
@@ -153,7 +184,11 @@ func (s *IOService) HomeGetProp(did, prop string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return results.(map[string]interface{})[prop], nil
+	resultMap, ok := results.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected map[string]interface{} for get_prop result, got %T", results)
+	}
+	return resultMap[prop], nil
 }
 
 func (s *IOService) HomeSetProps(did string, props map[string]interface{}) (map[string]int, error) {
@@ -173,7 +208,11 @@ func (s *IOService) HomeSetProp(did, prop string, value interface{}) (int, error
 	if err != nil {
 		return 0, err
 	}
-	if result.(map[string]interface{})["result"] == "ok" {
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		return -1, fmt.Errorf("expected map[string]interface{} for set_prop result, got %T", result)
+	}
+	if resultMap["result"] == "ok" {
 		return 0, nil
 	}
 	return -1, nil
@@ -196,9 +235,18 @@ func (s *IOService) MiotGetProps(did string, props [][]interface{}) ([]interface
 	if err != nil {
 		return nil, err
 	}
-	values := make([]interface{}, len(result.([]interface{})))
-	for i, it := range result.([]interface{}) {
-		itm := it.(map[string]interface{})
+	resultList, ok := result.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected []interface{} for prop/get result, got %T", result)
+	}
+	values := make([]interface{}, len(resultList))
+	for i, it := range resultList {
+		itm, ok := it.(map[string]interface{})
+		if !ok {
+			pterm.Warning.Printf("prop/get item %d is not map[string]interface{}, got %T\n", i, it)
+			values[i] = nil
+			continue
+		}
 		if code, ok := itm["code"].(float64); ok && code == 0 {
 			values[i] = itm["value"]
 		} else {
@@ -233,10 +281,25 @@ func (s *IOService) MiotSetProps(did string, props [][]interface{}) ([]float64, 
 		return nil, err
 	}
 
-	codes := make([]float64, len(result.([]interface{})))
-	for i, it := range result.([]interface{}) {
-		itm := it.(map[string]interface{})
-		codes[i] = itm["code"].(float64)
+	resultList, ok := result.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected []interface{} for prop/set result, got %T", result)
+	}
+	codes := make([]float64, len(resultList))
+	for i, it := range resultList {
+		itm, ok := it.(map[string]interface{})
+		if !ok {
+			pterm.Warning.Printf("prop/set item %d is not map[string]interface{}, got %T\n", i, it)
+			codes[i] = -1
+			continue
+		}
+		code, ok := itm["code"].(float64)
+		if !ok {
+			pterm.Warning.Printf("prop/set item %d 'code' is not float64, got %T\n", i, itm["code"])
+			codes[i] = -1
+			continue
+		}
+		codes[i] = code
 	}
 	return codes, nil
 }
@@ -265,7 +328,15 @@ func (s *IOService) MiotAction(did string, iid []int, args []interface{}) (float
 	if err != nil {
 		return -1, err
 	}
-	return result.(map[string]interface{})["code"].(float64), nil
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		return -1, fmt.Errorf("expected map[string]interface{} for action result, got %T", result)
+	}
+	code, ok := resultMap["code"].(float64)
+	if !ok {
+		return -1, fmt.Errorf("expected float64 for action 'code', got %T", resultMap["code"])
+	}
+	return code, nil
 }
 
 func (s *IOService) MiotSpec(keyword string) (data *MiotSpecInstancesData, err error) {

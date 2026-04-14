@@ -23,10 +23,7 @@ REGION = ""
 KEY = ""
 BASE_URL = ""
 
-[mina]
-DID = 
-
-[mina]
+	[mina]
 DID = ""
 
 [file]
@@ -77,6 +74,10 @@ func Reset() {
 
 	} else {
 		f, err = os.OpenFile(ConfPath, os.O_WRONLY|os.O_TRUNC, 0o600)
+		if err != nil {
+			pterm.Error.Printf("Fail to open config file: %v", err)
+			os.Exit(0)
+		}
 	}
 	defer func(f *os.File) {
 		_ = f.Close()
