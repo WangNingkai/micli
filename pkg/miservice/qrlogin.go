@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"micli/pkg/util"
+
 	"github.com/mdp/qrterminal/v3"
 	"github.com/pterm/pterm"
 )
@@ -21,6 +23,22 @@ import (
 // QRLogin performs QR code login using the Mi Home app.
 // Returns authentication data on success, error on failure.
 func (s *Service) QRLogin() (*Tokens, error) {
+	// Ensure token is initialized
+	if s.token == nil {
+		s.token = NewTokens()
+		s.token.UserName = s.username
+		s.token.DeviceId = strings.ToUpper(util.GetRandom(16))
+	}
+
+	// Try to load existing token from store
+	if s.tokenStore != nil && s.token.PassToken == "" {
+		if tokens, err := s.tokenStore.LoadToken(); err == nil {
+			if tokens.UserName == s.username {
+				s.token = tokens
+			}
+		}
+	}
+
 	// Step 1: Get location params from serviceLogin
 	locationData, err := s.getLocation()
 	if err != nil {
@@ -51,10 +69,9 @@ func (s *Service) QRLogin() (*Tokens, error) {
 	loginURL := fmt.Sprintf("https://account.xiaomi.com/longPolling/loginUrl?%s", qrParams.Encode())
 
 	headers := http.Header{
-		"User-Agent":      []string{s.buildUA()},
-		"Accept-Encoding": []string{"gzip"},
-		"Content-Type":    []string{"application/x-www-form-urlencoded"},
-		"Connection":      []string{"keep-alive"},
+		"User-Agent":   []string{s.buildUA()},
+		"Content-Type": []string{"application/x-www-form-urlencoded"},
+		"Connection":   []string{"keep-alive"},
 	}
 
 	req, err := http.NewRequest(http.MethodGet, loginURL, nil)
