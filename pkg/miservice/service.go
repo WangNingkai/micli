@@ -67,7 +67,12 @@ func New(username, password, region string, tokenStore TokenStore) *Service {
 	}
 }
 
-// Login 米家服务登录
+// GetTokenStore returns the token store instance
+func (s *Service) GetTokenStore() TokenStore {
+	return s.tokenStore
+}
+
+// Login 米家服务登录 - 优先尝试二维码登录，降级到密码登录
 func (s *Service) login(sid string) error {
 	var err error
 	defer func() {
@@ -93,6 +98,23 @@ func (s *Service) login(sid string) error {
 		s.token.UserName = s.username
 		s.token.DeviceId = strings.ToUpper(util.GetRandom(16))
 	}
+
+	// Try QR login first (avoids captcha issues with password login)
+	pterm.Info.Println("Trying QR code login...")
+	_, qrErr := s.QRLogin()
+	if qrErr == nil {
+		pterm.Success.Println("QR code login succeeded")
+		return nil
+	}
+
+	// QR login failed, fallback to password login
+	pterm.Warning.Printf("QR login failed (%v), falling back to password login\n", qrErr)
+	return s.passwordLogin(sid)
+}
+
+// passwordLogin performs traditional username/password login
+func (s *Service) passwordLogin(sid string) error {
+	var err error
 
 	cookies := []*http.Cookie{
 		{Name: "sdkVersion", Value: "3.9"},

@@ -10,11 +10,18 @@ type SidToken struct {
 }
 
 type Tokens struct {
-	UserName  string              `json:"user_name"`
-	DeviceId  string              `json:"device_id"`
-	UserId    string              `json:"user_id"`
-	PassToken string              `json:"pass_token"`
-	Sids      map[string]SidToken `json:"sids"`
+	UserName     string              `json:"user_name"`
+	DeviceId     string              `json:"device_id"`
+	UserId       string              `json:"user_id"`
+	CUserId      string              `json:"c_user_id,omitempty"`
+	PassToken    string              `json:"pass_token"`
+	SSecurity    string              `json:"ssecurity,omitempty"`
+	ServiceToken string              `json:"service_token,omitempty"`
+	Nonce        string              `json:"nonce,omitempty"`
+	UA           string              `json:"ua,omitempty"`
+	PassO        string              `json:"pass_o,omitempty"`
+	Sids         map[string]SidToken `json:"sids"`
+	LoginMode    string              `json:"login_mode,omitempty"` // "qr" or "password"
 }
 
 func NewTokens() *Tokens {
