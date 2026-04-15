@@ -95,6 +95,66 @@ type MiotSpecAction struct {
 	Out         []interface{} `json:"out"`
 }
 
+// DevProp - property from home.miot-spec.com (semantic names)
+type DevProp struct {
+	Piid       int            `json:"iid"`
+	DescZhCN   string         `json:"desc_zh_cn"`
+	DescEn     string         `json:"desc_en"`
+	Type       string         `json:"type"`
+	Format     string         `json:"format"`
+	Access     []string       `json:"access"`
+	ValueList  []DevValueItem `json:"value-list"`
+	ValueRange *DevValueRange `json:"value-range,omitempty"`
+	Unit       string         `json:"unit,omitempty"`
+}
+
+// DevAction - action from home.miot-spec.com
+type DevAction struct {
+	Aiid     int    `json:"iid"`
+	DescZhCN string `json:"desc_zh_cn"`
+	DescEn   string `json:"desc_en"`
+	Type     string `json:"type"`
+	In       []int  `json:"in"`
+	Out      []int  `json:"out"`
+}
+
+// DevService - service from home.miot-spec.com
+type DevService struct {
+	Siid     int                  `json:"iid"`
+	DescZhCN string               `json:"desc_zh_cn"`
+	DescEn   string               `json:"desc_en"`
+	Type     string               `json:"type"`
+	Props    map[string]DevProp   `json:"properties"`
+	Actions  map[string]DevAction `json:"actions"`
+}
+
+// DevSpec - full device spec from home.miot-spec.com
+type DevSpec struct {
+	Model    string                `json:"model"`
+	Type     string                `json:"type"`
+	DescZhCN string                `json:"desc_zh_cn"`
+	DescEn   string                `json:"desc_en"`
+	Services map[string]DevService `json:"services"`
+}
+
+// DevValueItem - enum value item
+type DevValueItem struct {
+	Value    interface{} `json:"value"`
+	DescZhCN string      `json:"desc_zh_cn"`
+	DescEn   string      `json:"desc_en"`
+}
+
+// DevValueRange - numeric range [min, max, step]
+type DevValueRange []float64
+
+// DevParam - action parameter
+type DevParam struct {
+	Piid     int    `json:"piid"`
+	DescZhCN string `json:"desc_zh_cn"`
+	DescEn   string `json:"desc_en"`
+	Type     string `json:"type"`
+}
+
 func NewIOService(service *Service) *IOService {
 	host := "api.mijia.tech/app"
 	protocol := "https"
@@ -432,6 +492,61 @@ func (s *IOService) MiotSpec(keyword string) (data *MiotSpecInstancesData, err e
 	}
 
 	return
+}
+
+// GetDeviceInfo fetches device specification from home.miot-spec.com
+// Returns semantic property/action names with Chinese descriptions
+func (s *IOService) GetDeviceInfo(model string) (*DevSpec, error) {
+	if model == "" {
+		return nil, errors.New("model is required")
+	}
+
+	url := fmt.Sprintf("https://home.miot-spec.com/spec/%s", model)
+	resp, err := s.service.client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("fetch spec for %s: %w", model, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("spec not found for model %s (status %d)", model, resp.StatusCode)
+	}
+
+	htmlData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
+	// Find JSON in <div id="app" data-page="...">
+	htmlStr := string(htmlData)
+	marker := `<div id="app" data-page="`
+	jsonStart := strings.Index(htmlStr, marker)
+	if jsonStart == -1 {
+		return nil, errors.New("no embedded JSON found in spec page")
+	}
+	jsonStart += len(marker)
+
+	jsonEnd := strings.Index(htmlStr[jsonStart:], `">`)
+	if jsonEnd == -1 {
+		return nil, errors.New("malformed spec page structure")
+	}
+	jsonStr := htmlStr[jsonStart : jsonStart+jsonEnd]
+
+	// Decode HTML entities (&quot; -> ", etc.)
+	jsonStr = strings.ReplaceAll(jsonStr, `&quot;`, "\"")
+	jsonStr = strings.ReplaceAll(jsonStr, `&amp;`, "&")
+	jsonStr = strings.ReplaceAll(jsonStr, `&#39;`, "'")
+
+	var pageData struct {
+		Props struct {
+			Spec DevSpec `json:"spec"`
+		} `json:"props"`
+	}
+	if err := json.Unmarshal([]byte(jsonStr), &pageData); err != nil {
+		return nil, fmt.Errorf("parse spec JSON: %w", err)
+	}
+
+	return &pageData.Props.Spec, nil
 }
 
 func (s *IOService) MiotDecode(ssecurity string, nonce string, data string, gzip bool) (interface{}, error) {

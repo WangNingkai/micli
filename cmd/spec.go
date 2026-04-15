@@ -13,6 +13,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	specDetail bool
+	specJSON   bool
+)
+
 var specCmd = &cobra.Command{
 	Use:   "spec [?model_keyword|type_urn]",
 	Short: "MIoT Spec",
@@ -50,6 +55,77 @@ var specCmd = &cobra.Command{
 		data, err = ioSrv.MiotSpec(keyword)
 		if err != nil {
 			pterm.Error.Println(err.Error())
+			return
+		}
+
+		// Extract model from type urn if needed
+		model := keyword
+		if strings.HasPrefix(keyword, "urn:miot-spec-v2:") {
+			// Extract model from urn: format like urn:miot-spec-v2:device:speaker:0000A015:xiaomi-lx06:1
+			parts := strings.Split(keyword, ":")
+			if len(parts) >= 5 {
+				model = parts[4]
+			}
+		}
+
+		// Use detailed spec from home.miot-spec.com if --detail flag is set
+		if specDetail {
+			devSpec, err := ioSrv.GetDeviceInfo(model)
+			if err != nil {
+				pterm.Error.Println(err.Error())
+				return
+			}
+			if specJSON {
+				handleResult(devSpec, nil)
+				return
+			}
+			// Output detailed tree with Chinese descriptions
+			if len(devSpec.Services) > 0 {
+				pterm.Info.Printf("Model: %s | Type: %s | %s\n", devSpec.Model, devSpec.Type, devSpec.DescZhCN)
+				var leveledList pterm.LeveledList
+				for _, service := range devSpec.Services {
+					leveledList = append(leveledList, pterm.LeveledListItem{Level: 0, Text: fmt.Sprintf("%s (siid:%d)", pterm.Cyan(service.DescZhCN), service.Siid)})
+					if len(service.Props) > 0 {
+						leveledList = append(leveledList, pterm.LeveledListItem{Level: 1, Text: pterm.Magenta("属性 Properties")})
+						for _, prop := range service.Props {
+							detail := fmt.Sprintf("%s | %s (piid:%d, format:%s, access:[%s])", pterm.Green(prop.DescZhCN), prop.DescEn, prop.Piid, prop.Format, strings.Join(prop.Access, ","))
+							leveledList = append(leveledList, pterm.LeveledListItem{Level: 2, Text: detail})
+							if prop.ValueRange != nil && len(*prop.ValueRange) >= 2 {
+								rangeData := fmt.Sprintf("range:[%v,%v], step:%v", (*prop.ValueRange)[0], (*prop.ValueRange)[1], (*prop.ValueRange)[2])
+								leveledList = append(leveledList, pterm.LeveledListItem{Level: 3, Text: pterm.LightYellow(rangeData)})
+							}
+							if prop.ValueList != nil {
+								for _, value := range prop.ValueList {
+									leveledList = append(leveledList, pterm.LeveledListItem{Level: 3, Text: pterm.NewStyle(pterm.FgLightYellow).Sprintf("%d-%s|%s", value.Value, value.DescZhCN, value.DescEn)})
+								}
+							}
+						}
+					}
+					if len(service.Actions) > 0 {
+						leveledList = append(leveledList, pterm.LeveledListItem{Level: 1, Text: pterm.Magenta("动作 Actions")})
+						for _, action := range service.Actions {
+							leveledList = append(leveledList, pterm.LeveledListItem{Level: 2, Text: fmt.Sprintf("%s | %s (aiid:%d)", pterm.Green(action.DescZhCN), action.DescEn, action.Aiid)})
+							if action.In != nil {
+								for _, piid := range action.In {
+									for _, prop := range service.Props {
+										if prop.Piid == piid {
+											leveledList = append(leveledList, pterm.LeveledListItem{Level: 3, Text: pterm.NewStyle(pterm.FgLightYellow).Sprintf("%d-%s", piid, prop.DescZhCN)})
+											break
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				root := putils.TreeFromLeveledList(leveledList)
+				root.Text = pterm.NewStyle(pterm.FgRed).Sprintf("设备规格 Device Spec [%s]", devSpec.DescZhCN)
+				err = pterm.DefaultTree.WithRoot(root).Render()
+				if err != nil {
+					pterm.Error.Println(err.Error())
+					return
+				}
+			}
 			return
 		}
 		// https://miot-spec.org/miot-spec-v2/spec/service?type=
@@ -127,5 +203,7 @@ func titleCase(s string) string {
 }
 
 func init() {
-	specCmd.Example = "  spec\n  spec xiaomi.wifispeaker.lx06\n  spec urn:miot-spec-v2:device:speaker:0000A015:xiaomi-lx06:1"
+	specCmd.Flags().BoolVar(&specDetail, "detail", false, "show detailed spec from home.miot-spec.com (with Chinese descriptions)")
+	specCmd.Flags().BoolVar(&specJSON, "json", false, "output in JSON format")
+	specCmd.Example = "  spec\n  spec xiaomi.wifispeaker.lx06\n  spec urn:miot-spec-v2:device:speaker:0000A015:xiaomi-lx06:1\n  spec --detail xiaomi.wifispeaker.lx06\n  spec --json --detail xiaomi.wifispeaker.lx06"
 }
