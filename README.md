@@ -156,6 +156,12 @@ Property format: `siid-piid` (e.g., `2-1` for service 2, property 1)
 
 # Start AI conversation mode
 ./micli mina serve
+
+# Execute natural language command (e.g., turn on lights)
+./micli mina run "打开卧室台灯"
+
+# Execute with specific device and silent mode
+./micli mina run "把亮度调到50%" -d <device_id> --silent
 ```
 
 ### 10. Text-to-Speech
@@ -201,6 +207,7 @@ Property format: `siid-piid` (e.g., `2-1` for service 2, property 1)
 | `mina player` | Player control (play/pause/volume) |
 | `mina records [limit]` | Get voice conversation records |
 | `mina serve` | Start web server + AI conversation |
+| `mina run <text>` | Execute natural language command |
 | `mina set_did` | Set default XiaoAi DID |
 | `tts -t <text>` | Edge TTS synthesis |
 | `miot_raw <cmd> <params>` | Raw MIoT API call |
@@ -279,9 +286,9 @@ Token cache: `~/.mi.token`
 ```
 main.go → cmd.Execute() (Cobra)
            │
-           ├─ cmd/               # Cobra commands
-           │   ├─ root.go        # Config & service init
-           │   ├─ mina*.go       # XiaoAi commands
+├─ cmd/               # Cobra commands
+            │   ├─ root.go        # Config & service init
+            │   ├─ mina*.go       # XiaoAi commands (tts/player/records/serve/run)
            │   ├─ props_*.go     # MIoT operations
            │   ├─ action.go      # MIoT actions
            │   ├─ alias.go       # Device alias commands

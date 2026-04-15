@@ -156,6 +156,12 @@ go build -o micli
 
 # 启动 AI 对话模式
 ./micli mina serve
+
+# 执行自然语言命令（如：打开台灯）
+./micli mina run "打开卧室台灯"
+
+# 指定设备执行，静默模式（无语音播报）
+./micli mina run "把亮度调到50%" -d <device_id> --silent
 ```
 
 ### 10. 文本转语音
@@ -201,6 +207,7 @@ go build -o micli
 | `mina player` | 播放控制（播放/暂停/音量） |
 | `mina records [limit]` | 获取语音对话记录 |
 | `mina serve` | 启动 Web 服务 + AI 对话 |
+| `mina run <text>` | 执行自然语言命令 |
 | `mina set_did` | 设置默认小爱设备 DID |
 | `tts -t <text>` | Edge TTS 合成 |
 | `miot_raw <cmd> <params>` | 原始 MIoT API 调用 |
@@ -279,9 +286,9 @@ Token 缓存：`~/.mi.token`
 ```
 main.go → cmd.Execute() (Cobra)
            │
-           ├─ cmd/               # Cobra 命令
-           │   ├─ root.go        # 配置和服务初始化
-           │   ├─ mina*.go       # 小爱音箱命令
+├─ cmd/               # Cobra 命令
+            │   ├─ root.go        # 配置和服务初始化
+            │   ├─ mina*.go       # 小爱音箱命令 (tts/player/records/serve/run)
            │   ├─ props_*.go     # MIoT 属性操作
            │   ├─ action.go      # MIoT 动作执行
            │   ├─ alias.go       # 设备别名命令

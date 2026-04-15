@@ -19,6 +19,7 @@ func init() {
 	minaCmd.PersistentFlags().StringVarP(&minaDeviceID, "device", "d", "", "mina service device id, not miot did")
 	minaCmd.AddCommand(minaListCmd)
 	minaCmd.AddCommand(minaTtsCmd)
+	minaCmd.AddCommand(minaRunCmd)
 	minaCmd.AddCommand(minaPlayerCmd)
 	minaCmd.AddCommand(minaRecordsCmd)
 	minaCmd.AddCommand(minaServeCmd)
