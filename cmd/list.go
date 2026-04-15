@@ -17,6 +17,7 @@ var (
 	devicesPath = "./data/devices.json"
 	reload      bool
 	homeFilter  string
+	outputJSON  bool
 	listCmd     = &cobra.Command{
 		Use:   "list [?name=full|name_keyword]",
 		Short: "Devs List",
@@ -58,6 +59,17 @@ var (
 				devices = lo.Filter(devices, func(s *miservice.DeviceInfo, index int) bool { return strings.Contains(s.HomeName, homeFilter) })
 			}
 
+			if outputJSON {
+				var jsonBytes []byte
+				jsonBytes, err = json.MarshalIndent(devices, "", "  ")
+				if err != nil {
+					pterm.Error.Println(err.Error())
+					return
+				}
+				fmt.Println(string(jsonBytes))
+				return
+			}
+
 			var items []pterm.BulletListItem
 			for _, device := range devices {
 				items = append(items, pterm.BulletListItem{
@@ -93,6 +105,7 @@ func init() {
 	listCmd.Example = "  list Light"
 	listCmd.Flags().BoolVarP(&reload, "reload", "r", false, "reload device list")
 	listCmd.Flags().StringVarP(&homeFilter, "home", "H", "", "filter devices by home name")
+	listCmd.Flags().BoolVarP(&outputJSON, "json", "j", false, "output in JSON format")
 }
 
 func getDeviceListFromRemote() (res []*miservice.DeviceInfo, err error) {
