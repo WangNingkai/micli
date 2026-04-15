@@ -26,35 +26,25 @@ var propsGetCmd = &cobra.Command{
 		)
 		if did == "" {
 			did = conf.Cfg.Section("account").Key("MI_DID").MustString("")
-			if did == "" {
-				did, err = chooseDevice()
-				if err != nil {
-					pterm.Error.Println(err.Error())
-					return
-				}
-			}
 		}
-		var devices []*miservice.DeviceInfo
-		if !util.IsDigit(did) {
-			devices, err = getDeviceListFromLocal() // Implement this method for the IOService
+		if did == "" {
+			did, err = chooseDevice()
 			if err != nil {
 				pterm.Error.Println(err.Error())
 				return
 			}
-			if len(devices) == 0 {
-				err = fmt.Errorf("no device found")
+		}
+		if !util.IsDigit(did) {
+			var device *miservice.DeviceInfo
+			did, device, err = resolveDevice(did)
+			if err != nil {
 				pterm.Error.Println(err.Error())
 				return
 			}
-			for _, device := range devices {
-				if device.Name == did {
-					did = device.Did
-					deviceModel = device.Model
-					break
-				}
-			}
+			deviceModel = device.Model
 		} else {
-			devices, err = getDeviceListFromLocal() // Implement this method for the IOService
+			var devices []*miservice.DeviceInfo
+			devices, err = getDeviceListFromLocal()
 			if err != nil {
 				pterm.Error.Println(err.Error())
 				return

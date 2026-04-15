@@ -14,6 +14,12 @@ MiCLI is a powerful CLI tool for controlling MIoT devices, XiaoAi speakers (Mina
 - 🤖 **AI Integration** - ChatGPT integration for smart conversations
 - 🎙️ **Edge TTS** - Microsoft Edge TTS without API key
 - 📱 **QR Code Login** - Scan QR code with Mi Home app to authenticate
+- 🔄 **Token Auto-Refresh** - Automatic token renewal before expiry (25-day threshold)
+- 🏷️ **Device Aliases** - Custom short names with fuzzy matching for quick device access
+- 🎬 **Scene Control** - List and execute MiHome smart scenes/automations
+- 🏡 **Home Filtering** - Filter devices by home/room name
+- 📊 **Device Statistics** - View power consumption and usage history
+- 🔧 **Consumables Management** - Track filters, batteries, and other consumable items
 - 🌐 **Web Server** - Built-in Gin server for extended functionality
 - ⚙️ **Automation** - Keyword-based command chaining via `commands.json`
 
@@ -51,13 +57,33 @@ Configuration options:
 ### 2. List Devices
 
 ```bash
+# List all devices
 ./micli list
+
+# Filter by home name
+./micli list --home "Living Room"
+
+# Reload from cloud
+./micli list -r
 ```
 
-### 3. Device Properties
+### 3. Device Aliases
 
 ```bash
-# Get device properties
+# List all aliases
+./micli alias list
+
+# Add an alias
+./micli alias add bedroom-light <device_name_or_did>
+
+# Remove an alias
+./micli alias rm bedroom-light
+```
+
+### 4. Device Properties
+
+```bash
+# Get device properties (by DID, name, or alias)
 ./micli get -d <device_id> --props <prop1>,<prop2>
 
 # Set device properties
@@ -66,14 +92,51 @@ Configuration options:
 
 Property format: `siid-piid` (e.g., `2-1` for service 2, property 1)
 
-### 4. MIoT Actions
+### 5. MIoT Actions
 
 ```bash
 # Execute MIoT action
 ./micli action <device_id> <siid-aiid> [args...]
 ```
 
-### 5. XiaoAi Speaker
+### 6. Scene Control
+
+```bash
+# List all scenes
+./micli scene list
+
+# Execute a scene by ID or name
+./micli scene run <scene_id_or_name>
+```
+
+### 7. Device Statistics
+
+```bash
+# View daily power consumption for the last 7 days
+./micli stats <device_id> --key 7.1 --type day
+
+# Use specific device via --did flag
+./micli stats <device_name> -k 7.1 -t day -d <device_id>
+
+# View hourly data for the last 24 hours
+./micli stats <device_id> --key 7.1 --type hour
+
+# View weekly/monthly statistics
+./micli stats <device_id> --key 7.1 --type week
+./micli stats <device_id> --key 7.1 --type month
+```
+
+### 8. Consumables Management
+
+```bash
+# List consumable items (filters, batteries, etc.)
+./micli consumables
+
+# Filter by home name
+./micli consumables --home "My Home"
+```
+
+### 9. XiaoAi Speaker
 
 ```bash
 # TTS synthesis
@@ -95,7 +158,7 @@ Property format: `siid-piid` (e.g., `2-1` for service 2, property 1)
 ./micli mina serve
 ```
 
-### 6. Text-to-Speech
+### 10. Text-to-Speech
 
 ```bash
 # Interactive voice selection
@@ -105,7 +168,7 @@ Property format: `siid-piid` (e.g., `2-1` for service 2, property 1)
 ./micli tts -t "Hello" -v en-US-JennyNeural
 ```
 
-### 7. QR Code Login
+### 11. QR Code Login
 
 ```bash
 # Generate QR code for Mi Home app scan
@@ -117,9 +180,19 @@ Property format: `siid-piid` (e.g., `2-1` for service 2, property 1)
 | Command | Description |
 |---------|-------------|
 | `list` | List all devices |
+| `list --home <name>` | Filter devices by home name |
 | `get` | Get MIoT device properties |
 | `set` | Set MIoT device properties |
 | `action <iid> [args]` | Execute MIoT action |
+| `alias` | Manage device name aliases |
+| `alias list` | List all custom aliases |
+| `alias add <alias> <device>` | Add an alias |
+| `alias rm <alias>` | Remove an alias |
+| `scene` | Manage smart scenes |
+| `scene list` | List all scenes |
+| `scene run <id/name>` | Execute a scene |
+| `stats <did/name> [-d <device>]` | View device statistics |
+| `consumables [--home <name>]` | List consumable items |
 | `spec [model]` | Show MIoT specification |
 | `decode` | Decode MIoT encrypted data |
 | `mina` | XiaoAi speaker commands |
@@ -211,6 +284,10 @@ main.go → cmd.Execute() (Cobra)
            │   ├─ mina*.go       # XiaoAi commands
            │   ├─ props_*.go     # MIoT operations
            │   ├─ action.go      # MIoT actions
+           │   ├─ alias.go       # Device alias commands
+           │   ├─ scene.go       # Scene control commands
+           │   ├─ stats.go       # Device statistics
+           │   ├─ consumables.go # Consumables management
            │   ├─ spec.go        # MIoT spec viewer
            │   ├─ miot_raw.go    # Raw MIoT API
            │   ├─ miio_raw.go    # Raw MiIO API

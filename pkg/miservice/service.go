@@ -11,6 +11,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
+	"time"
 
 	"micli/pkg/util"
 
@@ -89,6 +90,11 @@ func (s *Service) login(sid string) error {
 					_ = s.tokenStore.SaveToken(nil)
 				} else {
 					s.token = tokens
+					// Ensure mijia SID exists (older tokens may only have micoapi/xiaomiio)
+					if _, ok := s.token.Sids[MiioSid]; !ok {
+						s.token.Sids[MiioSid] = SidToken{}
+						_ = s.tokenStore.SaveToken(s.token)
+					}
 				}
 			}
 		}
@@ -97,6 +103,11 @@ func (s *Service) login(sid string) error {
 		s.token = NewTokens()
 		s.token.UserName = s.username
 		s.token.DeviceId = strings.ToUpper(util.GetRandom(16))
+	}
+
+	// Check if token is still valid and has the requested SID
+	if s.existSid(sid) && s.IsTokenValid() {
+		return nil
 	}
 
 	// Try QR login first (avoids captcha issues with password login)
@@ -180,6 +191,13 @@ func (s *Service) Request(sid, u string, data url.Values, cb DataCb, headers htt
 			return err
 		}
 	}
+	// Token age check: attempt refresh if token is older than 25 days
+	if !s.IsTokenValid() {
+		pterm.Debug.Println("Token expired or missing age info, attempting refresh")
+		if err := s.refreshToken(sid); err != nil {
+			pterm.Debug.Printf("Token refresh failed: %v, will fallback to re-login on auth error\n", err)
+		}
+	}
 	// log.Println("request token done")
 	req := s.buildRequest(sid, u, data, cb, headers)
 	resp, err := s.client.Do(req)
@@ -189,12 +207,12 @@ func (s *Service) Request(sid, u string, data url.Values, cb DataCb, headers htt
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(resp.Body)
+	var rs []byte
 	if resp.StatusCode == http.StatusOK {
 		type _result struct {
 			Code    int    `json:"code"`
 			Message string `json:"message"`
 		}
-		var rs []byte
 		rs, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return err
@@ -221,8 +239,11 @@ func (s *Service) Request(sid, u string, data url.Values, cb DataCb, headers htt
 		}
 		return s.Request(sid, u, data, cb, headers, false, output)
 	}
-	body, _ := io.ReadAll(resp.Body)
-	return fmt.Errorf("error %s: %s", u, string(body))
+		body := rs
+		if len(body) == 0 {
+			body, _ = io.ReadAll(resp.Body)
+		}
+		return fmt.Errorf("error %s: %s", u, string(body))
 }
 
 // NewRequest 构造请求
@@ -378,4 +399,58 @@ func (s *Service) existSid(sid string) bool {
 	}
 	_, ok := s.token.Sids[sid]
 	return ok
+}
+
+// IsTokenValid checks if the current token is still valid based on age.
+// Tokens older than 25 days are considered expired.
+func (s *Service) IsTokenValid() bool {
+	if s.token == nil || s.token.SavedAt == "" {
+		return false
+	}
+	savedAt, err := time.Parse(time.RFC3339, s.token.SavedAt)
+	if err != nil {
+		return false
+	}
+	return time.Since(savedAt) < 25*24*time.Hour
+}
+
+// refreshToken attempts to refresh the service token using the existing passToken
+// without requiring a full re-authentication.
+func (s *Service) refreshToken(sid string) error {
+	if s.token == nil || s.token.PassToken == "" {
+		return ErrTokenExpired
+	}
+
+	cookies := []*http.Cookie{
+		{Name: "sdkVersion", Value: "3.9"},
+		{Name: "deviceId", Value: s.token.DeviceId},
+		{Name: "userId", Value: s.token.UserId},
+		{Name: "passToken", Value: s.token.PassToken},
+	}
+
+	resp, err := s.serviceLogin(fmt.Sprintf("serviceLogin?sid=%s&_json=true", sid), nil, cookies)
+	if err != nil {
+		return fmt.Errorf("failed to refresh token: %w", err)
+	}
+
+	if resp.Code != 0 {
+		return fmt.Errorf("token refresh rejected: %s", resp.Desc)
+	}
+
+	serviceToken, err := s.securityTokenService(resp.Location, resp.Ssecurity, resp.Nonce)
+	if err != nil {
+		return fmt.Errorf("failed to get service token: %w", err)
+	}
+
+	s.token.Sids[sid] = SidToken{
+		SSecurity:    resp.Ssecurity,
+		ServiceToken: serviceToken,
+	}
+
+	if s.tokenStore != nil {
+		_ = s.tokenStore.SaveToken(s.token)
+	}
+
+	pterm.Debug.Println("Token refreshed successfully")
+	return nil
 }

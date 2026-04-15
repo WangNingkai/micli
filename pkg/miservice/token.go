@@ -2,6 +2,7 @@ package miservice
 
 import (
 	"os"
+	"time"
 )
 
 type SidToken struct {
@@ -22,6 +23,7 @@ type Tokens struct {
 	PassO        string              `json:"pass_o,omitempty"`
 	Sids         map[string]SidToken `json:"sids"`
 	LoginMode    string              `json:"login_mode,omitempty"` // "qr" or "password"
+	SavedAt      string              `json:"saved_at,omitempty"`   // RFC3339 timestamp when token was saved
 }
 
 func NewTokens() *Tokens {
@@ -58,6 +60,7 @@ func (mts *FileTokenStore) LoadToken() (*Tokens, error) {
 
 func (mts *FileTokenStore) SaveToken(tokens *Tokens) (err error) {
 	if tokens != nil {
+		tokens.SavedAt = time.Now().Format(time.RFC3339)
 		var data []byte
 		data, err = json.MarshalIndent(tokens, "", "  ")
 		if err != nil {

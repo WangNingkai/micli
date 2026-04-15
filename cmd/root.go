@@ -19,6 +19,7 @@ var (
 	ms           *miservice.Service
 	ioSrv        *miservice.IOService
 	minaSrv      *miservice.MinaService
+	aliasStore   *miservice.AliasStore
 	did          string
 	minaDeviceID string
 	rootCmd      = &cobra.Command{
@@ -52,6 +53,10 @@ func init() {
 	rootCmd.AddCommand(miioRawCmd)
 	rootCmd.AddCommand(setDidCmd)
 	rootCmd.AddCommand(ttsCmd)
+	rootCmd.AddCommand(aliasCmd)
+	rootCmd.AddCommand(sceneCmd)
+	rootCmd.AddCommand(statsCmd)
+	rootCmd.AddCommand(consumablesCmd)
 }
 
 func initConf() {
@@ -79,6 +84,10 @@ func initConf() {
 	)
 	ioSrv = miservice.NewIOService(ms)
 	minaSrv = miservice.NewMinaService(ms)
+	aliasStore = miservice.NewAliasStore()
+	if err := aliasStore.Load(); err != nil {
+		pterm.Warning.Printf("Failed to load alias store: %v\n", err)
+	}
 }
 
 func handleResult(res interface{}, err error) {

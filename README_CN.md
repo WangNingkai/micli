@@ -14,6 +14,12 @@ MiCLI 是一个强大的 CLI 工具，用于控制 MIoT 设备、小爱音箱（
 - 🤖 **AI 集成** - ChatGPT 智能对话
 - 🎙️ **Edge TTS** - 微软 Edge TTS，无需 API Key
 - 📱 **二维码登录** - 使用米家 App 扫码认证
+- 🔄 **Token 自动刷新** - 过期前自动续期（25 天阈值）
+- 🏷️ **设备别名** - 自定义短名称，支持模糊匹配快速访问设备
+- 🎬 **场景控制** - 列出和执行米家智能场景/自动化
+- 🏡 **家庭过滤** - 按家庭/房间名称过滤设备
+- 📊 **设备统计** - 查看功耗和使用历史数据
+- 🔧 **耗材管理** - 跟踪滤网、电池等耗材状态
 - 🌐 **Web 服务** - 内置 Gin 服务器，扩展更多功能
 - ⚙️ **自动化命令** - 基于关键词的命令链，通过 `commands.json` 配置
 
@@ -51,10 +57,30 @@ go build -o micli
 ### 2. 列出设备
 
 ```bash
+# 列出所有设备
 ./micli list
+
+# 按家庭名称过滤
+./micli list --home "客厅"
+
+# 从云端刷新
+./micli list -r
 ```
 
-### 3. 设备属性操作
+### 3. 设备别名
+
+```bash
+# 列出所有别名
+./micli alias list
+
+# 添加别名
+./micli alias add bedroom-light <设备名称或DID>
+
+# 删除别名
+./micli alias rm bedroom-light
+```
+
+### 4. 设备属性操作
 
 ```bash
 # 获取设备属性
@@ -66,14 +92,51 @@ go build -o micli
 
 属性格式：`siid-piid`（如 `2-1` 表示 service 2, property 1）
 
-### 4. MIoT 动作
+### 5. MIoT 动作
 
 ```bash
 # 执行 MIoT 动作
 ./micli action <device_id> <siid-aiid> [参数...]
 ```
 
-### 5. 小爱音箱
+### 6. 场景控制
+
+```bash
+# 列出所有场景
+./micli scene list
+
+# 按 ID 或名称执行场景
+./micli scene run <场景ID或名称>
+```
+
+### 7. 设备统计
+
+```bash
+# 查看最近 7 天的每日功耗
+./micli stats <设备ID> --key 7.1 --type day
+
+# 使用 --did 指定设备
+./micli stats <设备名称> -k 7.1 -t day -d <设备ID>
+
+# 查看最近 24 小时的每小时数据
+./micli stats <设备ID> --key 7.1 --type hour
+
+# 查看每周/每月统计
+./micli stats <设备ID> --key 7.1 --type week
+./micli stats <设备ID> --key 7.1 --type month
+```
+
+### 8. 耗材管理
+
+```bash
+# 列出耗材项（滤网、电池等）
+./micli consumables
+
+# 按家庭名称过滤
+./micli consumables --home "我的家庭"
+```
+
+### 9. 小爱音箱
 
 ```bash
 # TTS 语音合成
@@ -95,7 +158,7 @@ go build -o micli
 ./micli mina serve
 ```
 
-### 6. 文本转语音
+### 10. 文本转语音
 
 ```bash
 # 交互式选择语音
@@ -105,7 +168,7 @@ go build -o micli
 ./micli tts -t "Hello" -v en-US-JennyNeural
 ```
 
-### 7. 二维码登录
+### 11. 二维码登录
 
 ```bash
 # 生成二维码，使用米家 App 扫码登录
@@ -117,9 +180,19 @@ go build -o micli
 | 命令 | 说明 |
 |------|------|
 | `list` | 列出所有设备 |
+| `list --home <name>` | 按家庭名称过滤设备 |
 | `get` | 获取 MIoT 设备属性 |
 | `set` | 设置 MIoT 设备属性 |
 | `action <iid> [args]` | 执行 MIoT 动作 |
+| `alias` | 管理设备名称别名 |
+| `alias list` | 列出所有自定义别名 |
+| `alias add <alias> <device>` | 添加别名 |
+| `alias rm <alias>` | 删除别名 |
+| `scene` | 管理智能场景 |
+| `scene list` | 列出所有场景 |
+| `scene run <id/name>` | 执行场景 |
+| `stats <did/name> [-d <device>]` | 查看设备统计 |
+| `consumables [--home <name>]` | 列出耗材项 |
 | `spec [model]` | 查看 MIoT 规范 |
 | `decode` | 解码 MIoT 加密数据 |
 | `mina` | 小爱音箱命令 |
@@ -211,6 +284,10 @@ main.go → cmd.Execute() (Cobra)
            │   ├─ mina*.go       # 小爱音箱命令
            │   ├─ props_*.go     # MIoT 属性操作
            │   ├─ action.go      # MIoT 动作执行
+           │   ├─ alias.go       # 设备别名命令
+           │   ├─ scene.go       # 场景控制命令
+           │   ├─ stats.go       # 设备统计
+           │   ├─ consumables.go # 耗材管理
            │   ├─ spec.go        # MIoT 规范查看
            │   ├─ miot_raw.go    # 原始 MIoT API
            │   ├─ miio_raw.go    # 原始 MiIO API

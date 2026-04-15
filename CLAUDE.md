@@ -51,15 +51,21 @@ main.go → cmd.Execute() (Cobra)
            │   ├─ decode.go      # MIoT 数据解码
            │   ├─ set_did.go     # 设置默认 MIoT DID
            │   ├─ qr_login.go    # 二维码登录
-           │   └─ reset.go       # 重置配置
+           │   ├─ reset.go       # 重置配置
+           │   ├─ alias.go       # 设备别名管理
+           │   ├─ scene.go       # 场景管理
+           │   ├─ stats.go       # 设备统计
+           │   └─ consumables.go # 耗材管理
            │
            ├─ pkg/
            │   ├─ miservice/     # 小米 API 核心
            │   │   ├─ service.go     # 登录/认证/请求
            │   │   ├─ mina.go        # 小爱音箱 API
            │   │   ├─ io.go          # MIoT/MiIO 操作
-           │   │   ├─ token.go       # Token 存储
-           │   │   └─ qrlogin.go     # 二维码登录
+           │   │   ├─ token.go       # Token 存储/生命周期管理
+           │   │   ├─ qrlogin.go     # 二维码登录
+           │   │   ├─ alias.go       # 设备别名存储
+           │   │   └─ errors.go      # 标准错误定义
            │   ├─ jarvis/        # ChatGPT 集成
            │   │   ├─ jarvis.go      # 接口定义
            │   │   └─ chatgpt.go     # OpenAI 客户端
@@ -144,6 +150,23 @@ res, err := ioSrv.MiotAction(did, []int{siid, aiid}, inList)
 
 ### 请求签名
 `pkg/util/util.go` 中的 `SignData()` 使用 HMAC-SHA256 生成 `_nonce`、`data`、`signature`。
+
+### handleResult 统一输出
+所有命令使用 `handleResult(res, err)` 处理输出：
+- `err != nil` → pterm 红色错误消息
+- `res != nil` → pterm 格式化 JSON/表格输出
+- 不要在命令中自行处理错误输出，统一交给 handleResult
+
+### Token 生命周期管理
+- Token 缓存存储在 `~/.mi.token`
+- 基于年龄的自动刷新：超过 25 天自动重新登录
+- `token.go` 中的 `MustToken()` 负责加载/验证/刷新
+
+### 设备解析模式
+- 支持通过别名（alias）解析设备 DID
+- 支持家庭过滤（home filter）
+- `pkg/miservice/alias.go` 提供别名 ↔ DID 的双向映射
+- 多个命令共用设备解析逻辑，保持一致性
 
 ## Dependencies
 

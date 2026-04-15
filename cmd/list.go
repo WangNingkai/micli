@@ -16,10 +16,11 @@ import (
 var (
 	devicesPath = "./data/devices.json"
 	reload      bool
+	homeFilter  string
 	listCmd     = &cobra.Command{
 		Use:   "list [?name=full|name_keyword]",
 		Short: "Devs List",
-		Long:  `Devs List`,
+		Long:  `List all MiHome devices. Use --home to filter by home name.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			pterm.Debug.Println("listCmd called")
 			argLen := len(args)
@@ -52,6 +53,9 @@ var (
 			}
 			if arg0 != "" {
 				devices = lo.Filter(devices, func(s *miservice.DeviceInfo, index int) bool { return strings.Contains(s.Name, arg0) })
+			}
+			if homeFilter != "" {
+				devices = lo.Filter(devices, func(s *miservice.DeviceInfo, index int) bool { return strings.Contains(s.HomeName, homeFilter) })
 			}
 
 			var items []pterm.BulletListItem
@@ -88,10 +92,11 @@ var (
 func init() {
 	listCmd.Example = "  list Light"
 	listCmd.Flags().BoolVarP(&reload, "reload", "r", false, "reload device list")
+	listCmd.Flags().StringVarP(&homeFilter, "home", "H", "", "filter devices by home name")
 }
 
 func getDeviceListFromRemote() (res []*miservice.DeviceInfo, err error) {
-	res, err = ioSrv.DeviceList()
+	res, err = ioSrv.DeviceListWithHome()
 	return
 }
 
@@ -157,5 +162,42 @@ func chooseDevice() (did string, err error) {
 		Show()
 	pterm.Info.Println("Choose Device: " + choice)
 	did = deviceMap[choice]
+	return
+}
+
+func resolveDevice(input string) (did string, device *miservice.DeviceInfo, err error) {
+	devices, err := getDeviceListFromLocal()
+	if err != nil {
+		return
+	}
+
+	// Priority 1: exact DID match (all digits)
+	for _, d := range devices {
+		if d.Did == input {
+			return d.Did, d, nil
+		}
+	}
+
+	// Priority 2: delegate to AliasStore for alias/fuzzy resolution
+	if aliasStore != nil {
+		did, err = aliasStore.Resolve(input, devices)
+		if err == nil {
+			// Find the corresponding DeviceInfo
+			for _, d := range devices {
+				if d.Did == did {
+					return did, d, nil
+				}
+			}
+			// Alias resolved to a DID not in local cache, return anyway
+			return did, nil, nil
+		}
+	}
+
+	// If aliasStore.Resolve failed, return its error (e.g. ErrAmbiguousDevice or ErrDeviceNotFound)
+	if aliasStore != nil && err != nil {
+		return
+	}
+
+	err = miservice.ErrDeviceNotFound
 	return
 }

@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	MiioSid = "xiaomiio"
+	MiioSid = "mijia"
 )
 
 type IOService struct {
@@ -26,10 +26,28 @@ type IOService struct {
 }
 
 type DeviceInfo struct {
-	Name  string `json:"name"`
-	Model string `json:"model"`
-	Did   string `json:"did"`
-	Token string `json:"token"`
+	Name     string `json:"name"`
+	Model    string `json:"model"`
+	Did      string `json:"did"`
+	Token    string `json:"token"`
+	HomeName string `json:"home_name,omitempty"`
+	HomeID   string `json:"home_id,omitempty"`
+}
+
+// HomeInfo represents a Xiaomi smart home.
+type HomeInfo struct {
+	HomeID   string `json:"id"`
+	HomeName string `json:"name"`
+	UID      string `json:"uid"`
+}
+
+// SceneInfo represents a smart scene/automation.
+type SceneInfo struct {
+	SceneID   string `json:"scene_id"`
+	SceneName string `json:"name"`
+	HomeID    string `json:"home_id"`
+	OwnerUID  string `json:"owner_uid"`
+	Enabled   bool   `json:"enabled"`
 }
 
 type MiotSpecInstances struct {
@@ -78,7 +96,7 @@ type MiotSpecAction struct {
 }
 
 func NewIOService(service *Service) *IOService {
-	host := "api.io.mi.com/app"
+	host := "api.mijia.tech/app"
 	protocol := "https"
 	base := fmt.Sprintf("%s://%s", protocol, host)
 	if service.region != "" && service.region != "cn" {
@@ -93,7 +111,7 @@ func (s *IOService) Request(uri string, args map[string]interface{}) (interface{
 		return util.SignData(uri, args, token.Sids[MiioSid].SSecurity)
 	}
 	headers := http.Header{
-		"User-Agent":                 []string{"iOS-14.4-6.0.103-iPhone12,3--D7744744F7AF32F0544445285880DD63E47D9BE9-8816080-84A3F44E137B71AE-iPhone"},
+		"User-Agent":                 []string{"Android-15-11.0.701-Xiaomi-23046RP50C-OS2.0.212.0.VMYCNXM-MI_APP_STORE"},
 		"x-xiaomi-protocal-flag-cli": []string{"PROTOCAL-HTTP2"},
 	}
 	var resp interface{}
@@ -103,7 +121,17 @@ func (s *IOService) Request(uri string, args map[string]interface{}) (interface{
 	}
 	result, ok := resp.(map[string]interface{})["result"]
 	if !ok {
-		return nil, fmt.Errorf("error %s: %v", uri, resp)
+		// Extract error details from API response
+		resultMap, isMap := resp.(map[string]interface{})
+		if isMap {
+			if code, hasCode := resultMap["code"]; hasCode {
+				if message, hasMsg := resultMap["message"]; hasMsg {
+					return nil, fmt.Errorf("api error %s: code=%v, message=%v", uri, code, message)
+				}
+				return nil, fmt.Errorf("api error %s: code=%v", uri, code)
+			}
+		}
+		return nil, fmt.Errorf("api error %s: no result field, response=%v", uri, resp)
 	}
 	return result, nil
 }
@@ -476,4 +504,321 @@ func (s *IOService) loadSpec(p string) (map[string]string, error) {
 		return nil, err
 	}
 	return specs, nil
+}
+
+// HomeList retrieves the list of smart homes for the current user.
+func (s *IOService) HomeList() (homes []*HomeInfo, err error) {
+	data := map[string]interface{}{
+		"fg":              true,
+		"fetch_share":     true,
+		"fetch_share_dev": true,
+		"fetch_cariot":    true,
+		"limit":           300,
+		"app_ver":         7,
+		"plat_form":       0,
+	}
+	var result interface{}
+	result, err = s.Request("/v2/homeroom/gethome_merged", data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get home list: %w", err)
+	}
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected result type for gethome_merged: %T", result)
+	}
+	homelist, ok := resultMap["homelist"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected homelist type: %T", resultMap["homelist"])
+	}
+	for _, item := range homelist {
+		home, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		var idStr string
+		switch v := home["id"].(type) {
+		case string:
+			idStr = v
+		case float64:
+			idStr = fmt.Sprintf("%.0f", v)
+		}
+		name, _ := home["name"].(string)
+		var uidStr string
+		switch v := home["uid"].(type) {
+		case string:
+			uidStr = v
+		case float64:
+			uidStr = fmt.Sprintf("%.0f", v)
+		}
+		homes = append(homes, &HomeInfo{
+			HomeID:   idStr,
+			HomeName: name,
+			UID:      uidStr,
+		})
+	}
+	return
+}
+
+// SceneList retrieves all manual scenes for all homes.
+func (s *IOService) SceneList() (scenes []*SceneInfo, err error) {
+	homes, err := s.HomeList()
+	if err != nil {
+		return nil, err
+	}
+	for _, home := range homes {
+		data := map[string]interface{}{
+			"app_version": 12,
+			"get_type":    2,
+			"home_id":     home.HomeID,
+			"owner_uid":   home.UID,
+		}
+		var result interface{}
+		result, err = s.Request("/appgateway/miot/appsceneservice/AppSceneService/GetSimpleSceneList", data)
+		if err != nil {
+			pterm.Warning.Printf("Failed to get scenes for home %s: %v\n", home.HomeName, err)
+			continue
+		}
+		resultMap, ok := result.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		list, ok := resultMap["manual_scene_info_list"].([]interface{})
+		if !ok {
+			continue
+		}
+		for _, item := range list {
+			scene, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			sceneID, _ := scene["scene_id"].(string)
+			name, _ := scene["name"].(string)
+			enabled := true
+			if en, ok := scene["enabled"].(bool); ok {
+				enabled = en
+			}
+			scenes = append(scenes, &SceneInfo{
+				SceneID:   sceneID,
+				SceneName: name,
+				HomeID:    home.HomeID,
+				OwnerUID:  home.UID,
+				Enabled:   enabled,
+			})
+		}
+	}
+	return
+}
+
+// RunScene executes a manual scene by ID and homeID.
+// It fetches the home list to resolve the owner_uid.
+func (s *IOService) RunScene(sceneID, homeID string) (interface{}, error) {
+	scenes, err := s.SceneList()
+	if err != nil {
+		return nil, err
+	}
+	for _, sc := range scenes {
+		if sc.SceneID == sceneID && sc.HomeID == homeID {
+			return s.runSceneInternal(sc.SceneID, sc.HomeID, sc.OwnerUID)
+		}
+	}
+	// Scene not found in SceneList, try direct home lookup
+	return s.runSceneByHomeID(sceneID, homeID)
+}
+
+// runSceneInternal executes a scene when we already have the owner_uid.
+func (s *IOService) runSceneInternal(sceneID, homeID, ownerUID string) (interface{}, error) {
+	data := map[string]interface{}{
+		"scene_id":   sceneID,
+		"scene_type": 2,
+		"phone_id":   "null",
+		"home_id":    homeID,
+		"owner_uid":  ownerUID,
+	}
+	return s.Request("/appgateway/miot/appsceneservice/AppSceneService/NewRunScene", data)
+}
+
+// runSceneByHomeID fetches home list to resolve owner_uid for a given homeID.
+func (s *IOService) runSceneByHomeID(sceneID, homeID string) (interface{}, error) {
+	homes, err := s.HomeList()
+	if err != nil {
+		return nil, err
+	}
+	var uid string
+	for _, h := range homes {
+		if h.HomeID == homeID {
+			uid = h.UID
+			break
+		}
+	}
+	if uid == "" {
+		return nil, ErrHomeNotFound
+	}
+	return s.runSceneInternal(sceneID, homeID, uid)
+}
+
+// ResolveScene finds a scene by ID or name (fuzzy match).
+// Returns (sceneID, homeID, error).
+func (s *IOService) ResolveScene(input string) (sceneID, homeID string, err error) {
+	scenes, err := s.SceneList()
+	if err != nil {
+		return "", "", err
+	}
+	// Exact ID match
+	for _, sc := range scenes {
+		if sc.SceneID == input {
+			return sc.SceneID, sc.HomeID, nil
+		}
+	}
+	// Fuzzy name match
+	var matched []*SceneInfo
+	for _, sc := range scenes {
+		if strings.Contains(sc.SceneName, input) {
+			matched = append(matched, sc)
+		}
+	}
+	if len(matched) == 1 {
+		return matched[0].SceneID, matched[0].HomeID, nil
+	}
+	if len(matched) > 1 {
+		names := make([]string, len(matched))
+		for i, sc := range matched {
+			names[i] = sc.SceneName
+		}
+		return "", "", fmt.Errorf("multiple scenes matches '%s': %s", input, strings.Join(names, ", "))
+	}
+	return "", "", ErrSceneNotFound
+}
+
+// DeviceListWithHome retrieves all devices and populates HomeName/HomeID.
+func (s *IOService) DeviceListWithHome() ([]*DeviceInfo, error) {
+	devices, err := s.DeviceList()
+	if err != nil {
+		return nil, err
+	}
+	homes, err := s.HomeList()
+	if err != nil {
+		pterm.Warning.Printf("Failed to get home list, devices will not include home information: %v\n", err)
+		return devices, nil // Return devices even if home lookup fails
+	}
+	homeMap := make(map[string]*HomeInfo)
+	for _, h := range homes {
+		homeMap[h.HomeID] = h
+	}
+	// The device list API does not return home_id directly.
+	// We need to fetch devices per home to associate them.
+	for _, home := range homes {
+		homeDevices, err := s.HomeDeviceList(home.HomeID, home.UID)
+		if err != nil {
+			continue
+		}
+		homeDeviceDids := make(map[string]bool)
+		for _, d := range homeDevices {
+			homeDeviceDids[d] = true
+		}
+		for _, d := range devices {
+			if homeDeviceDids[d.Did] {
+				d.HomeName = home.HomeName
+				d.HomeID = home.HomeID
+			}
+		}
+	}
+	return devices, nil
+}
+
+// HomeDeviceList retrieves devices for a specific home.
+func (s *IOService) HomeDeviceList(homeID, ownerUID string) (dids []string, err error) {
+	data := map[string]interface{}{
+		"home_owner":         ownerUID,
+		"home_id":            homeID,
+		"limit":              200,
+		"start_did":          "",
+		"get_split_device":   true,
+		"support_smart_home": true,
+		"get_cariot_device":  true,
+		"get_third_device":   true,
+	}
+	startDid := ""
+	hasMore := true
+	for hasMore {
+		data["start_did"] = startDid
+		var result interface{}
+		result, err = s.Request("/home/home_device_list", data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get home devices: %w", err)
+		}
+		resultMap, ok := result.(map[string]interface{})
+		if !ok {
+			break
+		}
+		list, ok := resultMap["device_info"].([]interface{})
+		if !ok {
+			break
+		}
+		for _, item := range list {
+			device, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if did, ok := device["did"].(string); ok {
+				dids = append(dids, did)
+			}
+		}
+		startDid, _ = resultMap["max_did"].(string)
+		hasMore, _ = resultMap["has_more"].(bool)
+		hasMore = hasMore && startDid != ""
+	}
+	return
+}
+
+// GetStatistics retrieves device statistics (e.g., power consumption).
+func (s *IOService) GetStatistics(did, key, dataType string, timeStart, timeEnd int64) (interface{}, error) {
+	data := map[string]interface{}{
+		"did":        did,
+		"key":        key,
+		"data_type":  dataType,
+		"limit":      100,
+		"time_start": timeStart,
+		"time_end":   timeEnd,
+	}
+	return s.Request("/v2/user/statistics", data)
+}
+
+// GetConsumables retrieves consumable items (e.g., filter life, battery).
+// If homeFilter is non-empty, only consumables for that home are returned.
+func (s *IOService) GetConsumables(homeFilter string) (interface{}, error) {
+	homes, err := s.HomeList()
+	if err != nil {
+		return nil, err
+	}
+	var allItems []interface{}
+	for _, home := range homes {
+		if homeFilter != "" && home.HomeName != homeFilter {
+			continue
+		}
+		data := map[string]interface{}{
+			"home_id":       home.HomeID,
+			"owner_id":      home.UID,
+			"filter_ignore": true,
+		}
+		var result interface{}
+		result, err = s.Request("/v2/home/standard_consumable_items", data)
+		if err != nil {
+			pterm.Warning.Printf("Failed to get consumables for home %s: %v\n", home.HomeName, err)
+			continue
+		}
+		resultMap, ok := result.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if items, ok := resultMap["items"].([]interface{}); ok {
+			for _, item := range items {
+				if group, ok := item.(map[string]interface{}); ok {
+					if consumes, ok := group["consumes_data"].([]interface{}); ok {
+						allItems = append(allItems, consumes...)
+					}
+				}
+			}
+		}
+	}
+	return allItems, nil
 }

@@ -2,12 +2,10 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
 	"micli/internal/conf"
-	"micli/pkg/miservice"
 	"micli/pkg/util"
 
 	"github.com/pterm/pterm"
@@ -26,31 +24,19 @@ var propsSetCmd = &cobra.Command{
 		)
 		if did == "" {
 			did = conf.Cfg.Section("account").Key("MI_DID").MustString("")
-			if did == "" {
-				did, err = chooseDevice()
-				if err != nil {
-					pterm.Error.Println(err.Error())
-					return
-				}
-			}
 		}
-		if !util.IsDigit(did) {
-			var devices []*miservice.DeviceInfo
-			devices, err = getDeviceListFromLocal()
+		if did == "" {
+			did, err = chooseDevice()
 			if err != nil {
 				pterm.Error.Println(err.Error())
 				return
 			}
-			if len(devices) == 0 {
-				err = fmt.Errorf("no device found")
+		}
+		if !util.IsDigit(did) {
+			did, _, err = resolveDevice(did)
+			if err != nil {
 				pterm.Error.Println(err.Error())
 				return
-			}
-			for _, device := range devices {
-				if device.Name == did {
-					did = device.Did
-					break
-				}
 			}
 		}
 

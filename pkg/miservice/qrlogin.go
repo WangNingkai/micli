@@ -48,6 +48,10 @@ func (s *Service) QRLogin() (*Tokens, error) {
 	// If token is still valid, no need to re-login
 	if locationData["code"] == "0" && locationData["message"] == "Token refresh successful" {
 		pterm.Info.Println("Token is still valid, no need to re-login")
+		// Ensure mijia SID exists when reusing a valid token
+		if _, ok := s.token.Sids[MiioSid]; !ok {
+			s.token.Sids[MiioSid] = SidToken{}
+		}
 		return s.token, nil
 	}
 
