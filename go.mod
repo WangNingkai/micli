@@ -15,7 +15,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
 	github.com/tidwall/gjson v1.18.0
-	gopkg.in/ini.v1 v1.67.1
+	gopkg.in/ini.v1 v1.67.2
 )
 
 require (
